@@ -58,7 +58,7 @@ const text = {
     g2T: "2. Ride Application", g2D: "Go to Calendar, select a date, and click '1-Click Apply'.",
     g3T: "3. Status Update", g3D: "Use the status buttons or type a custom message to notify your driver/passengers in real-time.",
     loading: "Loading...", msgPlaceholder: "Type message...", sendBtn: "Send", vehicleType: "Vehicle", personalCar: "Personal Car", churchVan: "Church Van (15 seats)", seats: "seats",
-    refresh: "Refresh", statusUpdated: "Status updated.", msgSent: "Message sent.",
+    refresh: "Refresh", statusUpdated: "Status updated.", msgSent: "Message sent.", refreshed: "Data refreshed successfully.",
     assignedTitle: "Ride Assigned", assignedBody: "A driver has been assigned to you.", alertTitle: "Driver Update"
   },
   ko: {
@@ -77,7 +77,7 @@ const text = {
     g2T: "2. 라이드 신청하기", g2D: "일정(Calendar) 탭에서 날짜를 누르고 '1클릭 신청' 버튼을 누르면 신청이 완료됩니다.",
     g3T: "3. 실시간 톡/상태 알림", g3D: "출발 당일 상태 버튼을 누르거나 직접 텍스트를 입력해서 메시지를 전송하면 상대방에게 즉시 표시됩니다.",
     loading: "로딩 중...", msgPlaceholder: "메시지 직접 입력...", sendBtn: "전송", vehicleType: "운행 차량", personalCar: "개인 자가용", churchVan: "교회 밴 (15인승)", seats: "인승",
-    refresh: "새로고침", statusUpdated: "상태가 전송되었습니다.", msgSent: "메시지가 전송되었습니다.",
+    refresh: "새로고침", statusUpdated: "상태가 전송되었습니다.", msgSent: "메시지가 전송되었습니다.", refreshed: "최신 정보로 새로고침 되었습니다.",
     assignedTitle: "배차 완료", assignedBody: "차량이 성공적으로 배정되었습니다.", alertTitle: "운전자 알림"
   }
 };
@@ -96,6 +96,7 @@ export default function Home() {
 
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [currentTab, setCurrentTab] = useState<'calendar' | 'profile' | 'admin' | 'guide'>('calendar');
   
@@ -132,51 +133,63 @@ export default function Home() {
   };
 
   useEffect(() => {
-    let unsubscribeApps: () => void;
-    let unsubscribeAllApps: () => void;
+    let unsubscribeAll: () => void;
 
-    const setupRealtime = async (uid: string) => {
-      // 1. 내 신청 내역 및 알람 감지 리스너
-      const q = query(collection(db, 'applications'), where('userId', '==', uid));
-      unsubscribeApps = onSnapshot(q, (querySnapshot) => {
-        // 알림 처리
-        querySnapshot.docChanges().forEach((change) => {
-          const data = change.doc.data() as Application;
-          const prevData = prevAppsRef.current[change.doc.id];
-          
-          if (change.type === 'modified' && prevData && data.role === 'rider') {
-            if (!prevData.carIdTo && data.carIdTo) showLocalNotification(t.assignedTitle, t.assignedBody);
-            // 내 상태(status)가 아닌 다른 정보가 바뀌었을때 알람
-            if (prevData.statusTo !== data.statusTo && data.statusTo) showLocalNotification(t.alertTitle, data.statusTo);
-          }
-          prevAppsRef.current[change.doc.id] = { ...data, id: change.doc.id };
-        });
-
-        // 상태 반영
+    const setupRealtime = (uid: string) => {
+      // 모든 애플리케이션 데이터를 한 번에 실시간으로 감지
+      const q = query(collection(db, 'applications'));
+      
+      unsubscribeAll = onSnapshot(q, (snapshot) => {
         const appliedMap: Record<string, Application> = {};
-        querySnapshot.forEach(docSnap => {
-          const data = docSnap.data() as Application;
-          appliedMap[data.eventId] = { ...data, id: docSnap.id };
-        });
-        setUserApplications(appliedMap);
-      });
-
-      // 2. 전체 애플리케이션 감지 리스너 (운전자 상태 및 내 탑승자 목록을 실시간으로 가져옴)
-      const qAllApps = query(collection(db, 'applications'));
-      unsubscribeAllApps = onSnapshot(qAllApps, (snapshot) => {
-        const passengers: Application[] = [];
-        const drivers: Record<string, Application> = {};
+        const driversMap: Record<string, Application> = {};
+        const passengersArr: Application[] = [];
         
-        snapshot.forEach(docSnap => {
-          const data = docSnap.data() as Application;
-          const docId = docSnap.id;
+        snapshot.forEach((docSnap) => {
+          const data = { ...docSnap.data(), id: docSnap.id } as Application;
           
-          if (data.role === 'driver') drivers[docId] = { ...data, id: docId };
-          if (data.carIdTo?.endsWith(uid) || data.carIdFrom?.endsWith(uid)) passengers.push({ ...data, id: docId });
+          // 1. 내 신청 내역 분류
+          if (data.userId === uid) {
+            appliedMap[data.eventId] = data;
+          }
+          // 2. 전체 운전자 목록 수집 (탑승자가 운전자 상태를 즉시 볼 수 있게 함)
+          if (data.role === 'driver') {
+            driversMap[data.id] = data;
+          }
+          // 3. 내 차량에 배정된 탑승자 수집
+          if (data.carIdTo?.endsWith(uid) || data.carIdFrom?.endsWith(uid)) {
+            passengersArr.push(data);
+          }
         });
-        
-        setDriverDetails(drivers);
-        setMyPassengers(passengers);
+
+        // 변경 사항을 감지하여 알림 띄우기 (운전자 방해 금지 적용)
+        snapshot.docChanges().forEach((change) => {
+          const data = { ...change.doc.data(), id: change.doc.id } as Application;
+          const prevData = prevAppsRef.current[data.id];
+          
+          if (change.type === 'modified' && prevData) {
+            // 알림 1: 내가 탑승자인데, 내게 차량이 배정되었을 때
+            if (data.userId === uid && data.role === 'rider') {
+              if (!prevData.carIdTo && data.carIdTo) {
+                showLocalNotification(t.assignedTitle, t.assignedBody);
+              }
+            }
+            
+            // 알림 2: 내가 탑승자인데, '나를 태워주는 운전자'의 상태나 메시지가 변경되었을 때
+            if (data.role === 'driver') {
+              const myApp = appliedMap[data.eventId]; // 내 신청서 확인
+              if (myApp && myApp.carIdTo === data.id) { // 이 운전자가 내 운전자가 맞다면
+                if (prevData.statusTo !== data.statusTo && data.statusTo) {
+                  showLocalNotification(t.alertTitle, data.statusTo);
+                }
+              }
+            }
+          }
+          prevAppsRef.current[data.id] = data;
+        });
+
+        setUserApplications(appliedMap);
+        setDriverDetails(driversMap);
+        setMyPassengers(passengersArr);
       });
     };
 
@@ -187,9 +200,8 @@ export default function Home() {
         await fetchEvents();
         setupRealtime(currentUser.uid);
       } else {
-        setProfile(null); setUserApplications({}); setMyPassengers([]); setLoading(false);
-        if (unsubscribeApps) unsubscribeApps();
-        if (unsubscribeAllApps) unsubscribeAllApps();
+        setProfile(null); setUserApplications({}); setDriverDetails({}); setMyPassengers([]); setLoading(false);
+        if (unsubscribeAll) unsubscribeAll();
       }
     });
     
@@ -234,23 +246,31 @@ export default function Home() {
     } catch (error) { console.error(error); }
   };
 
-  const fetchEventAttendees = async (eventId: string) => {
-    onSnapshot(query(collection(db, 'applications'), where('eventId', '==', eventId)), (snapshot) => {
-      setEventAttendees(snapshot.docs.map(docSnap => ({ ...docSnap.data(), id: docSnap.id })) as Application[]);
-    });
-  };
-
+  // 관리자 화면용 이벤트 참석자 리스너
   useEffect(() => {
-    if (adminSelectedEventId) fetchEventAttendees(adminSelectedEventId);
-    else setEventAttendees([]);
+    let unsubAdmin: () => void;
+    if (adminSelectedEventId) {
+      const q = query(collection(db, 'applications'), where('eventId', '==', adminSelectedEventId));
+      unsubAdmin = onSnapshot(q, (snapshot) => {
+        setEventAttendees(snapshot.docs.map(docSnap => ({ ...docSnap.data(), id: docSnap.id })) as Application[]);
+      });
+    } else {
+      setEventAttendees([]);
+    }
+    return () => { if (unsubAdmin) unsubAdmin(); };
   }, [adminSelectedEventId]);
 
   const handleLogin = () => signInWithPopup(auth, googleProvider);
   const handleLogout = () => { signOut(auth); setProfile(null); setCurrentTab('calendar'); };
   
-  // 크롬 자체 새로고침과 완벽히 동일하게 작동하도록 수정
-  const handleRefresh = () => {
-    window.location.reload();
+  // 데이터 강제 새로고침 기능 (캐시 무시)
+  const handleRefresh = async () => {
+    if (!user) return;
+    setIsRefreshing(true);
+    await fetchEvents();
+    await fetchUserProfile(user.uid);
+    setIsRefreshing(false);
+    alert(t.refreshed);
   };
 
   const handleSaveProfile = async (e: React.FormEvent) => {
@@ -344,8 +364,8 @@ export default function Home() {
       <header style={{ background: '#ffffff', padding: '15px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid #e4e4e7' }}>
         <h1 style={{ margin: 0, fontSize: '18px', color: '#18181b', fontWeight: 'bold' }}>{t.appTitle}</h1>
         <div style={{ display: 'flex', gap: '8px' }}>
-          <button onClick={handleRefresh} style={{ padding: '6px 10px', background: '#e4e4e7', borderRadius: '20px', border: 'none', fontSize: '12px', fontWeight: 'bold', cursor: 'pointer' }}>
-            ↻ {t.refresh}
+          <button onClick={handleRefresh} disabled={isRefreshing} style={{ padding: '6px 10px', background: '#e4e4e7', borderRadius: '20px', border: 'none', fontSize: '12px', fontWeight: 'bold', cursor: 'pointer', opacity: isRefreshing ? 0.5 : 1 }}>
+            ↻ {isRefreshing ? '...' : t.refresh}
           </button>
           <button onClick={() => setLang(lang === 'ko' ? 'en' : 'ko')} style={{ padding: '6px 10px', background: '#e4e4e7', borderRadius: '20px', border: 'none', fontSize: '12px', fontWeight: 'bold', cursor: 'pointer' }}>
             {lang === 'ko' ? 'EN' : 'KR'}
