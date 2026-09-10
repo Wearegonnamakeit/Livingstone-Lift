@@ -58,7 +58,7 @@ const text = {
     g2T: "2. Ride Application", g2D: "Go to Calendar, select a date, and click '1-Click Apply'.",
     g3T: "3. Status Update", g3D: "Use the status buttons or type a custom message to notify your driver/passengers in real-time.",
     loading: "Loading...", msgPlaceholder: "Type message...", sendBtn: "Send", vehicleType: "Vehicle", personalCar: "Personal Car", churchVan: "Church Van (15 seats)", seats: "seats",
-    refresh: "Refresh", statusUpdated: "Status updated.", msgSent: "Message sent.", refreshed: "Data refreshed.",
+    refresh: "Refresh", statusUpdated: "Status updated.", msgSent: "Message sent.",
     assignedTitle: "Ride Assigned", assignedBody: "A driver has been assigned to you.", alertTitle: "Driver Update"
   },
   ko: {
@@ -77,7 +77,7 @@ const text = {
     g2T: "2. 라이드 신청하기", g2D: "일정(Calendar) 탭에서 날짜를 누르고 '1클릭 신청' 버튼을 누르면 신청이 완료됩니다.",
     g3T: "3. 실시간 톡/상태 알림", g3D: "출발 당일 상태 버튼을 누르거나 직접 텍스트를 입력해서 메시지를 전송하면 상대방에게 즉시 표시됩니다.",
     loading: "로딩 중...", msgPlaceholder: "메시지 직접 입력...", sendBtn: "전송", vehicleType: "운행 차량", personalCar: "개인 자가용", churchVan: "교회 밴 (15인승)", seats: "인승",
-    refresh: "새로고침", statusUpdated: "상태가 전송되었습니다.", msgSent: "메시지가 전송되었습니다.", refreshed: "최신 정보로 새로고침 되었습니다.",
+    refresh: "새로고침", statusUpdated: "상태가 전송되었습니다.", msgSent: "메시지가 전송되었습니다.",
     assignedTitle: "배차 완료", assignedBody: "차량이 성공적으로 배정되었습니다.", alertTitle: "운전자 알림"
   }
 };
@@ -133,58 +133,49 @@ export default function Home() {
 
   useEffect(() => {
     let unsubscribeApps: () => void;
-    let unsubscribePassengers: () => void;
+    let unsubscribeAllApps: () => void;
 
     const setupRealtime = async (uid: string) => {
+      // 1. 내 신청 내역 및 알람 감지 리스너
       const q = query(collection(db, 'applications'), where('userId', '==', uid));
-      unsubscribeApps = onSnapshot(q, async (querySnapshot) => {
-        const appliedMap: Record<string, Application> = {};
-        const driverIds = new Set<string>();
-
+      unsubscribeApps = onSnapshot(q, (querySnapshot) => {
+        // 알림 처리
         querySnapshot.docChanges().forEach((change) => {
           const data = change.doc.data() as Application;
           const prevData = prevAppsRef.current[change.doc.id];
           
-          if (change.type === 'modified' && prevData) {
-            // 오직 탑승자(Rider)일 때만 알림 발생 (운전자 방해 금지)
-            if (data.role === 'rider') {
-              if (!prevData.carIdTo && data.carIdTo) {
-                showLocalNotification(t.assignedTitle, t.assignedBody);
-              }
-              if (prevData.statusTo !== data.statusTo && data.statusTo) {
-                showLocalNotification(t.alertTitle, data.statusTo);
-              }
-            }
+          if (change.type === 'modified' && prevData && data.role === 'rider') {
+            if (!prevData.carIdTo && data.carIdTo) showLocalNotification(t.assignedTitle, t.assignedBody);
+            // 내 상태(status)가 아닌 다른 정보가 바뀌었을때 알람
+            if (prevData.statusTo !== data.statusTo && data.statusTo) showLocalNotification(t.alertTitle, data.statusTo);
           }
           prevAppsRef.current[change.doc.id] = { ...data, id: change.doc.id };
-          appliedMap[data.eventId] = { ...data, id: change.doc.id };
-          if (data.carIdTo) driverIds.add(data.carIdTo);
-          if (data.carIdFrom) driverIds.add(data.carIdFrom);
         });
-        
-        setUserApplications(appliedMap);
 
-        const drivers: Record<string, Application> = {};
-        for (const dId of Array.from(driverIds)) {
-          const dSnap = await getDoc(doc(db, 'applications', dId));
-          if (dSnap.exists()) {
-            const dData = dSnap.data() as Application;
-            drivers[dId] = { ...dData, id: dSnap.id };
-          }
-        }
-        setDriverDetails(prev => ({ ...prev, ...drivers }));
+        // 상태 반영
+        const appliedMap: Record<string, Application> = {};
+        querySnapshot.forEach(docSnap => {
+          const data = docSnap.data() as Application;
+          appliedMap[data.eventId] = { ...data, id: docSnap.id };
+        });
+        setUserApplications(appliedMap);
       });
 
-      const qPassengers = query(collection(db, 'applications'));
-      // 탑승자 목록 업데이트 리스너 (운전자용) - 여기서는 알림을 띄우지 않음
-      unsubscribePassengers = onSnapshot(qPassengers, (snapshot) => {
+      // 2. 전체 애플리케이션 감지 리스너 (운전자 상태 및 내 탑승자 목록을 실시간으로 가져옴)
+      const qAllApps = query(collection(db, 'applications'));
+      unsubscribeAllApps = onSnapshot(qAllApps, (snapshot) => {
         const passengers: Application[] = [];
+        const drivers: Record<string, Application> = {};
+        
         snapshot.forEach(docSnap => {
           const data = docSnap.data() as Application;
-          if (data.carIdTo?.endsWith(uid) || data.carIdFrom?.endsWith(uid)) {
-            passengers.push({ ...data, id: docSnap.id });
-          }
+          const docId = docSnap.id;
+          
+          if (data.role === 'driver') drivers[docId] = { ...data, id: docId };
+          if (data.carIdTo?.endsWith(uid) || data.carIdFrom?.endsWith(uid)) passengers.push({ ...data, id: docId });
         });
+        
+        setDriverDetails(drivers);
         setMyPassengers(passengers);
       });
     };
@@ -198,7 +189,7 @@ export default function Home() {
       } else {
         setProfile(null); setUserApplications({}); setMyPassengers([]); setLoading(false);
         if (unsubscribeApps) unsubscribeApps();
-        if (unsubscribePassengers) unsubscribePassengers();
+        if (unsubscribeAllApps) unsubscribeAllApps();
       }
     });
     
@@ -257,11 +248,9 @@ export default function Home() {
   const handleLogin = () => signInWithPopup(auth, googleProvider);
   const handleLogout = () => { signOut(auth); setProfile(null); setCurrentTab('calendar'); };
   
-  const handleRefresh = async () => {
-    if (!user) return;
-    await fetchEvents();
-    if (adminSelectedEventId) fetchEventAttendees(adminSelectedEventId);
-    alert(t.refreshed);
+  // 크롬 자체 새로고침과 완벽히 동일하게 작동하도록 수정
+  const handleRefresh = () => {
+    window.location.reload();
   };
 
   const handleSaveProfile = async (e: React.FormEvent) => {
