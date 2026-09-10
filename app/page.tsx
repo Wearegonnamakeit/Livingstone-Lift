@@ -46,11 +46,11 @@ const text = {
     appTitle: "Livingstone Lift", loginReq: "Please log in to use the application.", loginBtn: "Sign in with Google",
     createProfile: "Create Your Profile", name: "Name", phone: "Phone", address: "Address", rideType: "Ride Type", capacity: "Capacity (excl. driver)",
     needRide: "Need a Ride", canDrive: "Can Drive", driveSelf: "Drive Self", van: "I occasionally drive the Church Van", save: "Save Profile", saving: "Saving...",
-    myProfile: "My Profile", signOut: "Sign Out", enablePush: "Enable Push Notifications", prev: "Prev", next: "Next", scheduleTitle: "Schedule for Selected Date",
+    myProfile: "My Profile", signOut: "Sign Out", prev: "Prev", next: "Next", scheduleTitle: "Schedule for Selected Date",
     regular: "Regular Worship", special: "Special Event", myAssignment: "My Assignment", driverTxt: "Driver", statusTxt: "Driver Status",
     waitPickup: "Waiting at pickup area", myPassengers: "My Passengers", call: "Call", noPass: "No passengers assigned yet.",
     departed: "Departed", arrived: "Arrived", applyBtn: "1-Click Apply", appliedBtn: "Applied", cancelBtn: "Cancel", noEvent: "No events registered for this date.",
-    adminNew: "New Event", adminAssign: "Assignments", titleL: "Title", dateL: "Date", destL: "Destination", typeL: "Event Type",
+    adminNew: "New Event", adminAssign: "Assignments", adminUsers: "Users List", titleL: "Title", dateL: "Date", destL: "Destination", typeL: "Event Type",
     createBtn: "Create Event", creatingBtn: "Creating...", selectEvt: "-- Select Event to Manage --", toEvt: "To Event", fromEvt: "From Event",
     waitList: "Waiting List", allAssig: "All assigned", cars: "Cars", full: "FULL", mapNav: "Map Navi", dropHere: "Drop here", noDriv: "No drivers available.",
     navCal: "Calendar", navProf: "Profile", navAdmin: "Admin", navGuide: "Guide", guideTitle: "User Guide",
@@ -59,17 +59,18 @@ const text = {
     g3T: "3. Status Update", g3D: "Use the status buttons or type a custom message to notify your driver/passengers in real-time.",
     loading: "Loading...", msgPlaceholder: "Type message...", sendBtn: "Send", vehicleType: "Vehicle", personalCar: "Personal Car", churchVan: "Church Van (15 seats)", seats: "seats",
     refresh: "Refresh", statusUpdated: "Status updated.", msgSent: "Message sent.", refreshed: "Data refreshed successfully.",
-    assignedTitle: "Ride Assigned", assignedBody: "A driver has been assigned to you.", alertTitle: "Driver Update", newMsg: "New Message"
+    assignedTitle: "Ride Assigned", assignedBody: "A driver has been assigned to you.", alertTitle: "Driver Update", newMsg: "New Message",
+    pushEnabled: "Push Notifications ON", pushDisabled: "Enable Push Notifications", disablePushConfirm: "Do you want to disable push notifications?"
   },
   ko: {
     appTitle: "리빙스톤 리프트", loginReq: "앱을 사용하려면 로그인해 주세요.", loginBtn: "구글 계정으로 시작하기",
     createProfile: "프로필 생성", name: "이름", phone: "연락처", address: "픽업 주소", rideType: "탑승 유형", capacity: "탑승 가능 인원(운전자 본인 제외)",
     needRide: "라이드 필요", canDrive: "운전 가능", driveSelf: "개별 이동", van: "상황에 따라 교회 밴도 운전합니다", save: "프로필 저장", saving: "저장 중...",
-    myProfile: "내 프로필", signOut: "로그아웃", enablePush: "푸시 알림 켜기", prev: "이전", next: "다음", scheduleTitle: "선택된 날짜의 일정",
+    myProfile: "내 프로필", signOut: "로그아웃", prev: "이전", next: "다음", scheduleTitle: "선택된 날짜의 일정",
     regular: "정기 예배", special: "특별 행사", myAssignment: "내 탑승 정보", driverTxt: "운전자", statusTxt: "운전자 상태",
     waitPickup: "탑승 구역 대기 중", myPassengers: "내 탑승자 목록", call: "전화", noPass: "아직 배정된 탑승자가 없습니다.",
     departed: "출발함", arrived: "도착함", applyBtn: "1클릭 신청", appliedBtn: "신청 완료", cancelBtn: "신청 취소", noEvent: "이 날짜에 등록된 일정이 없습니다.",
-    adminNew: "새 일정 만들기", adminAssign: "인원 배정하기", titleL: "일정 이름", dateL: "날짜", destL: "목적지", typeL: "일정 종류",
+    adminNew: "새 일정", adminAssign: "인원 배정", adminUsers: "교인 명단", titleL: "일정 이름", dateL: "날짜", destL: "목적지", typeL: "일정 종류",
     createBtn: "일정 생성", creatingBtn: "생성 중...", selectEvt: "-- 관리할 일정 선택 --", toEvt: "교회로 갈 때 (To)", fromEvt: "집으로 갈 때 (From)",
     waitList: "대기 명단", allAssig: "배정 완료", cars: "차량 목록", full: "만차", mapNav: "지도 내비", dropHere: "여기로 드래그", noDriv: "가능한 운전자가 없습니다.",
     navCal: "일정", navProf: "프로필", navAdmin: "관리자", navGuide: "설명서", guideTitle: "앱 사용 설명서",
@@ -78,7 +79,8 @@ const text = {
     g3T: "3. 실시간 톡/상태 알림", g3D: "출발 당일 상태 버튼을 누르거나 직접 텍스트를 입력해서 메시지를 전송하면 상대방에게 즉시 표시됩니다.",
     loading: "로딩 중...", msgPlaceholder: "메시지 직접 입력...", sendBtn: "전송", vehicleType: "운행 차량", personalCar: "개인 자가용", churchVan: "교회 밴 (15인승)", seats: "인승",
     refresh: "새로고침", statusUpdated: "상태가 전송되었습니다.", msgSent: "메시지가 전송되었습니다.", refreshed: "최신 정보로 새로고침 되었습니다.",
-    assignedTitle: "배차 완료", assignedBody: "차량이 성공적으로 배정되었습니다.", alertTitle: "운전자 상태 업데이트", newMsg: "새 메시지"
+    assignedTitle: "배차 완료", assignedBody: "차량이 성공적으로 배정되었습니다.", alertTitle: "운전자 상태 업데이트", newMsg: "새 메시지",
+    pushEnabled: "✅ 푸시 알림 켜짐 (끄기)", pushDisabled: "푸시 알림 켜기", disablePushConfirm: "푸시 알림을 끄시겠습니까?"
   }
 };
 
@@ -105,7 +107,6 @@ export default function Home() {
 
   const [formData, setFormData] = useState({ name: '', phone: '', address: '', rideType: 'Need a Ride', capacity: '4', isVan: false });
   const [saving, setSaving] = useState(false);
-  const [notificationStatus, setNotificationStatus] = useState<string>('');
 
   const [events, setEvents] = useState<ChurchEvent[]>([]);
   const [userApplications, setUserApplications] = useState<Record<string, Application>>({});
@@ -115,9 +116,11 @@ export default function Home() {
   const [newEvent, setNewEvent] = useState({ title: '', date: '', destination: '', type: 'regular' });
   const [creatingEvent, setCreatingEvent] = useState(false);
 
-  const [adminMode, setAdminMode] = useState<'create' | 'assign'>('create');
+  // Admin Mode updated to include 'users'
+  const [adminMode, setAdminMode] = useState<'create' | 'assign' | 'users'>('create');
   const [adminSelectedEventId, setAdminSelectedEventId] = useState<string>('');
   const [eventAttendees, setEventAttendees] = useState<Application[]>([]);
+  const [allUsersList, setAllUsersList] = useState<(UserProfile & {id: string})[]>([]);
   const [rideDirection, setRideDirection] = useState<'to' | 'from'>('to');
   const [dragOverCarId, setDragOverCarId] = useState<string | null>(null);
 
@@ -217,13 +220,27 @@ export default function Home() {
     return () => { unsubscribeAuth(); };
   }, [lang]);
 
-  const requestNotificationPermission = async () => {
+  // Push Notification Toggle Logic
+  const togglePushNotification = async () => {
+    if (!user || !profile) return;
+    
+    // If already has token, confirm to disable
+    if (profile.fcmToken) {
+      if (confirm(t.disablePushConfirm)) {
+        try {
+          await updateDoc(doc(db, 'users', user.uid), { fcmToken: '' });
+          setProfile({ ...profile, fcmToken: '' });
+        } catch (error) { console.error(error); }
+      }
+      return;
+    }
+
+    // Otherwise, request permission and enable
     if (typeof window === 'undefined' || !('Notification' in window)) {
       alert(lang === 'ko' ? '아이폰은 화면 하단 공유 버튼을 눌러 [홈 화면에 추가]를 해야 푸시 알림을 켤 수 있습니다.' : 'Please add this app to your Home Screen to enable push notifications.');
       return;
     }
-    
-    if (!messaging || !user) return;
+    if (!messaging) return;
 
     try {
       const permission = await Notification.requestPermission();
@@ -233,7 +250,7 @@ export default function Home() {
         });
         if (token) {
           await updateDoc(doc(db, 'users', user.uid), { fcmToken: token });
-          setNotificationStatus(lang === 'ko' ? '푸시 알림이 성공적으로 설정되었습니다.' : 'Push notifications enabled.');
+          setProfile({ ...profile, fcmToken: token });
         }
       } else {
         alert(lang === 'ko' ? '알림 권한이 거부되었습니다. 기기 설정에서 알림을 허용해주세요.' : 'Notification permission denied.');
@@ -266,6 +283,17 @@ export default function Home() {
     } catch (error) { console.error(error); }
   };
 
+  // Fetch all users for Admin User List
+  const fetchAllUsers = async () => {
+    if (!profile?.isAdmin) return;
+    try {
+      const q = query(collection(db, 'users'));
+      const querySnapshot = await getDocs(q);
+      setAllUsersList(querySnapshot.docs.map(docSnap => ({ ...docSnap.data(), id: docSnap.id })) as (UserProfile & {id: string})[]);
+    } catch (error) { console.error(error); }
+  };
+
+  // Update attendees list based on selected event
   useEffect(() => {
     let unsubAdmin: () => void;
     if (adminSelectedEventId) {
@@ -278,6 +306,13 @@ export default function Home() {
     }
     return () => { if (unsubAdmin) unsubAdmin(); };
   }, [adminSelectedEventId]);
+
+  // Fetch all users when admin navigates to 'users' tab
+  useEffect(() => {
+    if (adminMode === 'users') {
+      fetchAllUsers();
+    }
+  }, [adminMode]);
 
   const handleLogin = () => signInWithPopup(auth, googleProvider);
   const handleLogout = () => { signOut(auth); setProfile(null); setCurrentTab('calendar'); };
@@ -404,6 +439,8 @@ export default function Home() {
   const drivers = eventAttendees.filter(a => a.role === 'driver');
   const riders = eventAttendees.filter(a => a.role === 'rider');
   const unassignedRiders = riders.filter(r => rideDirection === 'to' ? r.carIdTo === null : r.carIdFrom === null);
+
+  const hasPushEnabled = !!profile?.fcmToken;
 
   return (
     <div style={{ width: '100%', maxWidth: '480px', margin: '0 auto', background: '#f4f4f5', minHeight: '100vh', paddingBottom: '80px', fontFamily: 'sans-serif' }}>
@@ -568,11 +605,18 @@ export default function Home() {
                   <p style={{ margin: '0 0 10px 0', fontSize: '14px' }}><strong>{t.address}:</strong> {profile.address}</p>
                   <p style={{ margin: '0 0 10px 0', fontSize: '14px' }}><strong>{t.rideType}:</strong> {profile.rideType}</p>
                   
+                  {/* Push Notification Toggle Button */}
                   <div style={{ marginTop: '15px', paddingTop: '15px', borderTop: '1px solid #e2e8f0' }}>
-                    <button onClick={requestNotificationPermission} style={{ width: '100%', padding: '10px', background: '#0284c7', color: 'white', border: 'none', borderRadius: '6px', fontSize: '13px', fontWeight: 'bold', cursor: 'pointer' }}>
-                      {t.enablePush}
+                    <button 
+                      onClick={togglePushNotification} 
+                      style={{ 
+                        width: '100%', padding: '10px', color: 'white', border: 'none', borderRadius: '6px', 
+                        fontSize: '13px', fontWeight: 'bold', cursor: 'pointer',
+                        background: hasPushEnabled ? '#10b981' : '#0284c7' 
+                      }}
+                    >
+                      {hasPushEnabled ? t.pushEnabled : t.pushDisabled}
                     </button>
-                    {notificationStatus && <p style={{ margin: '8px 0 0 0', fontSize: '12px', color: '#475569' }}>{notificationStatus}</p>}
                   </div>
                 </div>
                 <button onClick={handleLogout} style={{ width: '100%', padding: '12px', background: '#f4f4f5', color: '#ef4444', border: '1px solid #fecaca', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer' }}>{t.signOut}</button>
@@ -599,12 +643,13 @@ export default function Home() {
 
             {currentTab === 'admin' && profile.isAdmin && (
               <div>
-                <div style={{ display: 'flex', gap: '10px', marginBottom: '20px' }}>
-                  <button onClick={() => setAdminMode('create')} style={{ flex: 1, padding: '10px', borderRadius: '8px', border: 'none', background: adminMode === 'create' ? '#18181b' : '#e4e4e7', color: adminMode === 'create' ? '#fff' : '#71717a', fontWeight: 'bold', cursor: 'pointer' }}>{t.adminNew}</button>
-                  <button onClick={() => setAdminMode('assign')} style={{ flex: 1, padding: '10px', borderRadius: '8px', border: 'none', background: adminMode === 'assign' ? '#18181b' : '#e4e4e7', color: adminMode === 'assign' ? '#fff' : '#71717a', fontWeight: 'bold', cursor: 'pointer' }}>{t.adminAssign}</button>
+                <div style={{ display: 'flex', gap: '8px', marginBottom: '20px' }}>
+                  <button onClick={() => setAdminMode('create')} style={{ flex: 1, padding: '10px', borderRadius: '8px', border: 'none', background: adminMode === 'create' ? '#18181b' : '#e4e4e7', color: adminMode === 'create' ? '#fff' : '#71717a', fontWeight: 'bold', cursor: 'pointer', fontSize: '12px' }}>{t.adminNew}</button>
+                  <button onClick={() => setAdminMode('assign')} style={{ flex: 1, padding: '10px', borderRadius: '8px', border: 'none', background: adminMode === 'assign' ? '#18181b' : '#e4e4e7', color: adminMode === 'assign' ? '#fff' : '#71717a', fontWeight: 'bold', cursor: 'pointer', fontSize: '12px' }}>{t.adminAssign}</button>
+                  <button onClick={() => setAdminMode('users')} style={{ flex: 1, padding: '10px', borderRadius: '8px', border: 'none', background: adminMode === 'users' ? '#18181b' : '#e4e4e7', color: adminMode === 'users' ? '#fff' : '#71717a', fontWeight: 'bold', cursor: 'pointer', fontSize: '12px' }}>{t.adminUsers}</button>
                 </div>
 
-                {adminMode === 'create' ? (
+                {adminMode === 'create' && (
                   <div style={{ background: '#ffffff', padding: '20px', borderRadius: '12px' }}>
                     <form onSubmit={handleCreateEvent}>
                       <div style={{ marginBottom: '15px' }}><label style={{ display: 'block', fontSize: '13px', fontWeight: 'bold', marginBottom: '5px' }}>{t.titleL}</label><input required value={newEvent.title} onChange={e => setNewEvent({...newEvent, title: e.target.value})} style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #ccc' }} /></div>
@@ -613,7 +658,35 @@ export default function Home() {
                       <button type="submit" style={{ width: '100%', padding: '12px', background: '#3b82f6', color: 'white', borderRadius: '8px', fontWeight: 'bold', border: 'none', cursor: 'pointer' }}>{creatingEvent ? t.creatingBtn : t.createBtn}</button>
                     </form>
                   </div>
-                ) : (
+                )}
+
+                {adminMode === 'users' && (
+                  <div style={{ background: '#ffffff', padding: '15px', borderRadius: '12px', overflowX: 'auto' }}>
+                    <h3 style={{ margin: '0 0 15px 0', fontSize: '16px' }}>{t.adminUsers} ({allUsersList.length})</h3>
+                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px', minWidth: '400px' }}>
+                      <thead>
+                        <tr style={{ background: '#f4f4f5', borderBottom: '2px solid #e4e4e7' }}>
+                          <th style={{ padding: '10px', textAlign: 'left' }}>{t.name}</th>
+                          <th style={{ padding: '10px', textAlign: 'left' }}>{t.phone}</th>
+                          <th style={{ padding: '10px', textAlign: 'left' }}>{t.address}</th>
+                          <th style={{ padding: '10px', textAlign: 'left' }}>{t.rideType}</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {allUsersList.map(u => (
+                          <tr key={u.id} style={{ borderBottom: '1px solid #e4e4e7' }}>
+                            <td style={{ padding: '10px', fontWeight: 'bold' }}>{u.name} {u.isAdmin && <span style={{ color: '#ef4444', fontSize: '10px', marginLeft: '4px' }}>(Admin)</span>}</td>
+                            <td style={{ padding: '10px' }}><a href={`tel:${u.phone}`} style={{ color: '#2563eb', textDecoration: 'none' }}>{u.phone}</a></td>
+                            <td style={{ padding: '10px' }}>{u.address}</td>
+                            <td style={{ padding: '10px' }}>{u.rideType} {u.isVan && <span style={{ color: '#059669', fontWeight: 'bold' }}>(Van)</span>}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+
+                {adminMode === 'assign' && (
                   <div>
                     <select value={adminSelectedEventId} onChange={e => setAdminSelectedEventId(e.target.value)} style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid #ccc', marginBottom: '15px' }}>
                       <option value="">{t.selectEvt}</option>
