@@ -5,7 +5,6 @@ import { signInWithPopup, signOut, onAuthStateChanged, User } from 'firebase/aut
 import { doc, getDoc, setDoc, collection, addDoc, getDocs, query, orderBy, serverTimestamp, deleteDoc, where, updateDoc, onSnapshot } from 'firebase/firestore';
 import { auth, googleProvider, db, messaging, getToken, onMessage } from '../lib/firebase';
 
-// Interfaces for TypeScript typing
 interface UserProfile {
   name: string;
   phone: string;
@@ -42,7 +41,6 @@ interface Application {
   isVan?: boolean;
 }
 
-// Multi-language text dictionary
 const text = {
   en: {
     appTitle: "Livingstone Lift", loginReq: "Please log in to use the application.", loginBtn: "Sign in with Google",
@@ -84,7 +82,6 @@ const text = {
   }
 };
 
-// Status map for translation
 const statusMap: Record<string, {en: string, ko: string}> = {
   'Waiting at pickup area': {en: 'Waiting at pickup area', ko: '탑승 구역 대기 중'},
   'Departed': {en: 'Departed', ko: '출발함'},
@@ -92,9 +89,9 @@ const statusMap: Record<string, {en: string, ko: string}> = {
 };
 
 export default function Home() {
-  // Application states
   const [lang, setLang] = useState<'ko' | 'en'>('ko');
   const t = text[lang];
+  
   const displayStatus = (status: string) => statusMap[status]?.[lang] || status;
 
   const [user, setUser] = useState<User | null>(null);
@@ -127,16 +124,15 @@ export default function Home() {
   const [customMsg, setCustomMsg] = useState<Record<string, string>>({});
   const prevAppsRef = useRef<Record<string, Application>>({});
 
-  // Trigger browser's native notification API if foreground
+  // 브라우저 내부 알림 (앱이 켜져있을 때 팝업)
   const showLocalNotification = (title: string, body: string) => {
-    if (Notification.permission === 'granted') {
+    if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted') {
       new Notification(title, { body, icon: '/icon.png' });
     } else {
       alert(`${title}\n${body}`);
     }
   };
 
-  // Setup real-time listener for the applications collection
   useEffect(() => {
     let unsubscribeAll: () => void;
 
@@ -156,19 +152,18 @@ export default function Home() {
           if (data.carIdTo?.endsWith(uid) || data.carIdFrom?.endsWith(uid)) passengersArr.push(data);
         });
 
-        // Check for modifications to trigger local notifications (Foreground)
         snapshot.docChanges().forEach((change) => {
           const data = { ...change.doc.data(), id: change.doc.id } as Application;
           const prevData = prevAppsRef.current[data.id];
           
           if (change.type === 'modified' && prevData) {
-            // Notify rider if a driver was assigned
+            // 알림: 차량 배정 완료
             if (data.userId === uid && data.role === 'rider') {
               if (!prevData.carIdTo && data.carIdTo) {
                 showLocalNotification(t.assignedTitle, t.assignedBody);
               }
             }
-            // Notify rider if their assigned driver changed status
+            // 알림: 운전자의 상태 업데이트 감지
             if (data.role === 'driver') {
               const myApp = appliedMap[data.eventId];
               if (myApp && myApp.carIdTo === data.id) {
@@ -194,12 +189,12 @@ export default function Home() {
         await fetchEvents();
         setupRealtime(currentUser.uid);
         
-        // Handle incoming messages when the app is in foreground
+        // 포그라운드(앱이 열려있을 때) 알림 수신
         if (messaging) {
           onMessage(messaging, (payload) => {
             const title = payload.notification?.title || 'Livingstone Lift';
             const body = payload.notification?.body || '';
-            if (Notification.permission === 'granted') {
+            if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted') {
               new Notification(title, { body, icon: '/icon.png' });
             }
           });
@@ -213,19 +208,32 @@ export default function Home() {
     return () => { unsubscribeAuth(); };
   }, [lang]);
 
-  // Request FCM token and update user profile
+  // 푸시 알림 권한 요청 (안전장치 추가)
   const requestNotificationPermission = async () => {
+    if (typeof window === 'undefined' || !('Notification' in window)) {
+      alert(lang === 'ko' ? '아이폰은 화면 하단 공유 버튼을 눌러 [홈 화면에 추가]를 해야 푸시 알림을 켤 수 있습니다.' : 'Please add this app to your Home Screen to enable push notifications.');
+      return;
+    }
+    
     if (!messaging || !user) return;
+
     try {
       const permission = await Notification.requestPermission();
       if (permission === 'granted') {
-        const token = await getToken(messaging, { vapidKey: 'BJk6feu2WhkttIgPvgw977NbtMd_1RfEfMFqpYECAZgSxeeqSVmGRXnkYDABCXFMWcN9-fEnGUXStxjSX_QOvcU' });
+        const token = await getToken(messaging, {
+          vapidKey: 'BJk6feu2WhkttIgPvgw977NbtMd_1RfEfMFqpYECAZgSxeeqSVmGRXnkYDABCXFMWcN9-fEnGUXStxjSX_QOvcU'
+        });
         if (token) {
           await updateDoc(doc(db, 'users', user.uid), { fcmToken: token });
-          setNotificationStatus(lang === 'ko' ? '푸시 알림이 설정되었습니다.' : 'Push notifications enabled.');
+          setNotificationStatus(lang === 'ko' ? '푸시 알림이 성공적으로 설정되었습니다.' : 'Push notifications enabled.');
         }
+      } else {
+        alert(lang === 'ko' ? '알림 권한이 거부되었습니다. 기기 설정에서 알림을 허용해주세요.' : 'Notification permission denied.');
       }
-    } catch (error) { console.error(error); }
+    } catch (error) { 
+      console.error(error); 
+      alert(lang === 'ko' ? '알림 설정 중 오류가 발생했습니다.' : 'Error setting up notifications.');
+    }
   };
 
   const fetchUserProfile = async (uid: string) => {
@@ -234,7 +242,10 @@ export default function Home() {
       if (docSnap.exists()) {
         const data = docSnap.data() as UserProfile;
         setProfile(data);
-        setFormData({ name: data.name || '', phone: data.phone || '', address: data.address || '', rideType: data.rideType || 'Need a Ride', capacity: data.capacity || '4', isVan: data.isVan || false });
+        setFormData({
+          name: data.name || '', phone: data.phone || '', address: data.address || '',
+          rideType: data.rideType || 'Need a Ride', capacity: data.capacity || '4', isVan: data.isVan || false
+        });
       }
     } catch (error) { console.error(error); } finally { setLoading(false); }
   };
@@ -247,22 +258,23 @@ export default function Home() {
     } catch (error) { console.error(error); }
   };
 
-  // Real-time listener for admin attendee view
   useEffect(() => {
     let unsubAdmin: () => void;
     if (adminSelectedEventId) {
-      unsubAdmin = onSnapshot(query(collection(db, 'applications'), where('eventId', '==', adminSelectedEventId)), (snapshot) => {
+      const q = query(collection(db, 'applications'), where('eventId', '==', adminSelectedEventId));
+      unsubAdmin = onSnapshot(q, (snapshot) => {
         setEventAttendees(snapshot.docs.map(docSnap => ({ ...docSnap.data(), id: docSnap.id })) as Application[]);
       });
-    } else setEventAttendees([]);
+    } else {
+      setEventAttendees([]);
+    }
     return () => { if (unsubAdmin) unsubAdmin(); };
   }, [adminSelectedEventId]);
 
-  // General App Handlers
   const handleLogin = () => signInWithPopup(auth, googleProvider);
   const handleLogout = () => { signOut(auth); setProfile(null); setCurrentTab('calendar'); };
   
-  // Hard refresh to bypass PWA cache
+  // 새로고침 함수
   const handleRefresh = () => {
     window.location.reload();
   };
@@ -296,20 +308,15 @@ export default function Home() {
     } catch (error) { console.error(error); }
   };
 
-  const handleCancelApplication = async (eventId: string) => { 
-    if (user) await deleteDoc(doc(db, 'applications', `${eventId}_${user.uid}`)); 
+  const handleCancelApplication = async (eventId: string) => {
+    if (user) await deleteDoc(doc(db, 'applications', `${eventId}_${user.uid}`));
   };
 
-  // Function to update the driver's vehicle type on the fly
   const updateVehicle = async (appId: string, isVan: boolean, capacity: string) => {
-    try { 
-      await updateDoc(doc(db, 'applications', appId), { isVan, capacity }); 
-    } catch (error) { 
-      console.error(error); 
-    }
+    try { await updateDoc(doc(db, 'applications', appId), { isVan, capacity }); } catch (error) { console.error(error); }
   };
 
-  // Trigger backend API to send push notification
+  // 백엔드 API 호출로 푸시 알림 발송
   const sendPushToUser = async (targetUserId: string, title: string, body: string) => {
     try {
       const snap = await getDoc(doc(db, 'users', targetUserId));
@@ -324,7 +331,6 @@ export default function Home() {
     } catch (error) { console.error("Push failed", error); }
   };
 
-  // Update ride status and optionally trigger push
   const updateStatus = async (userApp: Application, direction: 'to' | 'from', statusMsg: string, isCustomMsg = false) => {
     try {
       await updateDoc(doc(db, 'applications', userApp.id), { [direction === 'to' ? 'statusTo' : 'statusFrom']: statusMsg });
@@ -332,14 +338,14 @@ export default function Home() {
       const title = isCustomMsg ? t.newMsg : t.alertTitle;
       const body = `${userApp.name}: ${statusMsg}`;
       
-      // If driver updates status, notify all their passengers
+      // 운전자가 업데이트 -> 모든 탑승자에게 알림
       if (userApp.role === 'driver') {
         const passengers = eventAttendees.filter(a => direction === 'to' ? a.carIdTo === userApp.id : a.carIdFrom === userApp.id);
         for (const p of passengers) {
-          await sendPushToUser(p.userId, title, body); 
+          await sendPushToUser(p.userId, title, body);
         }
       } else {
-        // If rider updates status, notify their driver
+        // 탑승자가 업데이트 -> 담당 운전자에게 알림
         const driverAppId = direction === 'to' ? userApp.carIdTo : userApp.carIdFrom;
         const driverApp = eventAttendees.find(a => a.id === driverAppId);
         if (driverApp) await sendPushToUser(driverApp.userId, title, body);
@@ -358,21 +364,20 @@ export default function Home() {
     }
   };
 
-  // Admin drag and drop logic
   const handleDrop = async (e: React.DragEvent, carId: string | null, capacityStr?: string) => {
     e.preventDefault(); e.stopPropagation(); setDragOverCarId(null);
     const passengerId = e.dataTransfer.getData('passengerId');
     if (!passengerId) return;
 
     if (carId && capacityStr) {
-      if (eventAttendees.filter(a => rideDirection === 'to' ? a.carIdTo === carId : a.carIdFrom === carId).length >= (parseInt(capacityStr) || 4)) {
+      const limit = parseInt(capacityStr) || 4;
+      if (eventAttendees.filter(a => rideDirection === 'to' ? a.carIdTo === carId : a.carIdFrom === carId).length >= limit) {
         alert(t.full); return;
       }
     }
-    
     await updateDoc(doc(db, 'applications', passengerId), { [rideDirection === 'to' ? 'carIdTo' : 'carIdFrom']: carId });
     
-    // Notify rider of successful assignment
+    // 배정 완료 후 탑승자에게 푸시 전송
     const pSnap = await getDoc(doc(db, 'applications', passengerId));
     const pUserId = pSnap.data()?.userId;
     if (pUserId && carId) await sendPushToUser(pUserId, t.assignedTitle, t.assignedBody);
@@ -387,22 +392,25 @@ export default function Home() {
 
   if (loading) return <div style={{ padding: '50px', textAlign: 'center' }}>{t.loading}</div>;
 
-  const year = currentDate.getFullYear(); const month = currentDate.getMonth();
+  const year = currentDate.getFullYear();
+  const month = currentDate.getMonth();
   const blanks = Array.from({ length: new Date(year, month, 1).getDay() }, (_, i) => i);
   const days = Array.from({ length: new Date(year, month + 1, 0).getDate() }, (_, i) => i + 1);
   const monthNames = lang === 'ko' ? ["1월","2월","3월","4월","5월","6월","7월","8월","9월","10월","11월","12월"] : ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+  
   const drivers = eventAttendees.filter(a => a.role === 'driver');
   const riders = eventAttendees.filter(a => a.role === 'rider');
   const unassignedRiders = riders.filter(r => rideDirection === 'to' ? r.carIdTo === null : r.carIdFrom === null);
 
   return (
     <div style={{ width: '100%', maxWidth: '480px', margin: '0 auto', background: '#f4f4f5', minHeight: '100vh', paddingBottom: '80px', fontFamily: 'sans-serif' }}>
-      {/* Header */}
+      
+      {/* -------------------- HEADER -------------------- */}
       <header style={{ background: '#ffffff', padding: '15px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid #e4e4e7' }}>
         <h1 style={{ margin: 0, fontSize: '18px', color: '#18181b', fontWeight: 'bold' }}>{t.appTitle}</h1>
         <div style={{ display: 'flex', gap: '8px' }}>
           <button onClick={handleRefresh} disabled={isRefreshing} style={{ padding: '6px 10px', background: '#e4e4e7', borderRadius: '20px', border: 'none', fontSize: '12px', fontWeight: 'bold', cursor: 'pointer', opacity: isRefreshing ? 0.5 : 1 }}>
-            [ {t.refresh} ]
+            ↻ {isRefreshing ? '...' : t.refresh}
           </button>
           <button onClick={() => setLang(lang === 'ko' ? 'en' : 'ko')} style={{ padding: '6px 10px', background: '#e4e4e7', borderRadius: '20px', border: 'none', fontSize: '12px', fontWeight: 'bold', cursor: 'pointer' }}>
             {lang === 'ko' ? 'EN' : 'KR'}
@@ -411,47 +419,50 @@ export default function Home() {
       </header>
 
       <main style={{ padding: '20px' }}>
-        {/* Authentication Flow */}
+        {/* -------------------- LOGIN / PROFILE CREATION -------------------- */}
         {!user ? (
           <div style={{ background: '#ffffff', padding: '30px', borderRadius: '12px', textAlign: 'center' }}>
             <p style={{ marginBottom: '20px' }}>{t.loginReq}</p>
-            <button onClick={handleLogin} style={{ width: '100%', padding: '14px', background: '#3b82f6', color: 'white', borderRadius: '8px', fontWeight: 'bold' }}>{t.loginBtn}</button>
+            <button onClick={handleLogin} style={{ width: '100%', padding: '14px', background: '#3b82f6', color: 'white', borderRadius: '8px', fontWeight: 'bold', border: 'none', cursor: 'pointer' }}>
+              {t.loginBtn}
+            </button>
           </div>
         ) : !profile ? (
           <div style={{ background: '#ffffff', padding: '25px', borderRadius: '12px' }}>
             <h2 style={{ margin: '0 0 15px 0', fontSize: '18px' }}>{t.createProfile}</h2>
             <form onSubmit={handleSaveProfile}>
-              <div style={{ marginBottom: '15px' }}><label>{t.name}</label><input required value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #ccc' }} /></div>
-              <div style={{ marginBottom: '15px' }}><label>{t.phone}</label><input required type="tel" value={formData.phone} onChange={e => setFormData({...formData, phone: e.target.value})} style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #ccc' }} /></div>
-              <div style={{ marginBottom: '15px' }}><label>{t.address}</label><input required value={formData.address} onChange={e => setFormData({...formData, address: e.target.value})} style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #ccc' }} /></div>
+              <div style={{ marginBottom: '15px' }}><label style={{ display: 'block', fontSize: '13px', fontWeight: 'bold', marginBottom: '5px' }}>{t.name}</label><input required value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #ccc' }} /></div>
+              <div style={{ marginBottom: '15px' }}><label style={{ display: 'block', fontSize: '13px', fontWeight: 'bold', marginBottom: '5px' }}>{t.phone}</label><input required type="tel" value={formData.phone} onChange={e => setFormData({...formData, phone: e.target.value})} style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #ccc' }} /></div>
+              <div style={{ marginBottom: '15px' }}><label style={{ display: 'block', fontSize: '13px', fontWeight: 'bold', marginBottom: '5px' }}>{t.address}</label><input required value={formData.address} onChange={e => setFormData({...formData, address: e.target.value})} style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #ccc' }} /></div>
               <div style={{ marginBottom: '15px' }}>
-                <label>{t.rideType}</label>
+                <label style={{ display: 'block', fontSize: '13px', fontWeight: 'bold', marginBottom: '5px' }}>{t.rideType}</label>
                 <select value={formData.rideType} onChange={e => setFormData({...formData, rideType: e.target.value})} style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #ccc' }}>
                   <option value="Need a Ride">{t.needRide}</option><option value="Can Drive">{t.canDrive}</option><option value="Drive Self">{t.driveSelf}</option>
                 </select>
               </div>
               {formData.rideType === 'Can Drive' && (
                 <>
-                  <div style={{ marginBottom: '15px' }}><label>{t.capacity}</label><input type="number" value={formData.capacity} onChange={e => setFormData({...formData, capacity: e.target.value})} style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #ccc' }} /></div>
+                  <div style={{ marginBottom: '15px' }}><label style={{ display: 'block', fontSize: '13px', fontWeight: 'bold', marginBottom: '5px' }}>{t.capacity}</label><input type="number" value={formData.capacity} onChange={e => setFormData({...formData, capacity: e.target.value})} style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #ccc' }} /></div>
                   <div style={{ marginBottom: '15px', display: 'flex', gap: '10px' }}>
                     <input type="checkbox" id="isVan" checked={formData.isVan} onChange={e => setFormData({...formData, isVan: e.target.checked})} />
                     <label htmlFor="isVan" style={{ fontSize: '13px', fontWeight: 'bold' }}>{t.van}</label>
                   </div>
                 </>
               )}
-              <button type="submit" disabled={saving} style={{ width: '100%', padding: '14px', background: '#18181b', color: 'white', borderRadius: '8px', fontWeight: 'bold' }}>{saving ? t.saving : t.save}</button>
+              <button type="submit" disabled={saving} style={{ width: '100%', padding: '14px', background: '#18181b', color: 'white', borderRadius: '8px', fontWeight: 'bold', border: 'none', cursor: 'pointer' }}>{saving ? t.saving : t.save}</button>
             </form>
           </div>
         ) : (
           <>
-            {/* Calendar Tab */}
+            {/* -------------------- CALENDAR TAB -------------------- */}
             {currentTab === 'calendar' && (
               <div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', background: '#fff', padding: '15px', borderRadius: '16px' }}>
-                  <button onClick={() => setCurrentDate(new Date(year, month - 1, 1))} style={{ padding: '8px 12px', borderRadius: '8px', border: 'none', fontWeight: 'bold' }}>{t.prev}</button>
+                  <button onClick={() => setCurrentDate(new Date(year, month - 1, 1))} style={{ padding: '8px 12px', borderRadius: '8px', border: 'none', fontWeight: 'bold', cursor: 'pointer' }}>{t.prev}</button>
                   <h2 style={{ margin: 0, fontSize: '18px', fontWeight: 'bold' }}>{year} {monthNames[month]}</h2>
-                  <button onClick={() => setCurrentDate(new Date(year, month + 1, 1))} style={{ padding: '8px 12px', borderRadius: '8px', border: 'none', fontWeight: 'bold' }}>{t.next}</button>
+                  <button onClick={() => setCurrentDate(new Date(year, month + 1, 1))} style={{ padding: '8px 12px', borderRadius: '8px', border: 'none', fontWeight: 'bold', cursor: 'pointer' }}>{t.next}</button>
                 </div>
+                
                 <div style={{ background: '#fff', padding: '20px', borderRadius: '16px' }}>
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '5px' }}>
                     {blanks.map(b => <div key={`blank-${b}`} />)}
@@ -460,14 +471,14 @@ export default function Home() {
                       const hasEvent = events.some(e => e.date === dateStr);
                       return (
                         <div key={day} onClick={() => setSelectedDate(dateStr)} style={{ height: '45px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', borderRadius: '8px', background: selectedDate === dateStr ? '#18181b' : hasEvent ? '#f3f4f6' : 'transparent', color: selectedDate === dateStr ? '#fff' : '#18181b', fontWeight: hasEvent ? 'bold' : 'normal' }}>
-                          <span>{day}</span>{hasEvent && <div style={{ width: '5px', height: '5px', background: selectedDate === dateStr ? '#fff' : '#3b82f6', borderRadius: '50%', marginTop: '3px' }} />}
+                          <span>{day}</span>
+                          {hasEvent && <div style={{ width: '5px', height: '5px', background: selectedDate === dateStr ? '#fff' : '#3b82f6', borderRadius: '50%', marginTop: '3px' }} />}
                         </div>
                       );
                     })}
                   </div>
                 </div>
 
-                {/* Event Listing */}
                 {selectedDate && (
                   <div style={{ marginTop: '20px' }}>
                     <h3 style={{ fontSize: '16px', marginBottom: '10px', fontWeight: 'bold' }}>{t.scheduleTitle}</h3>
@@ -478,17 +489,14 @@ export default function Home() {
                           <span style={{ fontSize: '12px', background: event.type === 'regular' ? '#dbeafe' : '#fce7f3', color: event.type === 'regular' ? '#1d4ed8' : '#be185d', padding: '5px 10px', borderRadius: '12px', fontWeight: 'bold' }}>{event.type === 'regular' ? t.regular : t.special}</span>
                           <h4 style={{ margin: '12px 0', fontSize: '18px' }}>{event.title}</h4>
                           
-                          {/* Driver View */}
+                          {/* 운전자 화면 */}
                           {userApp?.role === 'driver' && (
                             <div style={{ marginBottom: '15px', background: '#f8fafc', padding: '15px', borderRadius: '8px' }}>
                               <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '15px' }}>
                                 <span style={{ fontSize: '13px', fontWeight: 'bold' }}>{t.vehicleType}:</span>
                                 <select 
                                   value={userApp.isVan ? 'van' : 'car'} 
-                                  onChange={(e) => {
-                                    const isVan = e.target.value === 'van';
-                                    updateVehicle(userApp.id, isVan, isVan ? '15' : (profile?.capacity || '4'));
-                                  }} 
+                                  onChange={(e) => updateVehicle(userApp.id, e.target.value === 'van', e.target.value === 'van' ? '15' : profile.capacity)}
                                   style={{ padding: '6px', borderRadius: '6px', border: '1px solid #ccc', fontSize: '13px' }}
                                 >
                                   <option value="car">{t.personalCar} ({profile.capacity}{t.seats})</option>
@@ -499,21 +507,21 @@ export default function Home() {
                               {myPassengers.filter(p => p.eventId === event.id).map(p => (
                                 <div key={p.id} style={{ display: 'flex', justifyContent: 'space-between', padding: '8px', background: '#fff', borderRadius: '6px', marginBottom: '5px', border: '1px solid #e2e8f0' }}>
                                   <div><span style={{ fontSize: '13px', fontWeight: 'bold' }}>{p.name}</span> {p.statusTo && p.carIdTo?.endsWith(user.uid) && <span style={{ fontSize: '11px', color: '#ef4444', fontWeight: 'bold', marginLeft: '5px' }}>({displayStatus(p.statusTo)})</span>}</div>
-                                  <a href={`tel:${p.phone}`} style={{ fontSize: '12px', color: '#2563eb', fontWeight: 'bold' }}>{t.call}</a>
+                                  <a href={`tel:${p.phone}`} style={{ fontSize: '12px', color: '#2563eb', fontWeight: 'bold', textDecoration: 'none' }}>{t.call}</a>
                                 </div>
                               ))}
                               <div style={{ display: 'flex', gap: '5px', marginTop: '10px' }}>
-                                <button onClick={() => updateStatus(userApp, 'to', 'Departed')} style={{ flex: 1, padding: '8px', background: '#f1f5f9', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '12px', fontWeight: 'bold' }}>{t.departed}</button>
-                                <button onClick={() => updateStatus(userApp, 'to', 'Arrived')} style={{ flex: 1, padding: '8px', background: '#f1f5f9', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '12px', fontWeight: 'bold' }}>{t.arrived}</button>
+                                <button onClick={() => updateStatus(userApp, 'to', 'Departed')} style={{ flex: 1, padding: '8px', background: '#f1f5f9', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '12px', fontWeight: 'bold', cursor: 'pointer' }}>{t.departed}</button>
+                                <button onClick={() => updateStatus(userApp, 'to', 'Arrived')} style={{ flex: 1, padding: '8px', background: '#f1f5f9', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '12px', fontWeight: 'bold', cursor: 'pointer' }}>{t.arrived}</button>
                               </div>
                               <div style={{ display: 'flex', gap: '5px', marginTop: '5px' }}>
                                 <input type="text" placeholder={t.msgPlaceholder} value={customMsg[`${userApp.id}_to`] || ''} onChange={e => setCustomMsg({...customMsg, [`${userApp.id}_to`]: e.target.value})} style={{ flex: 1, padding: '8px', borderRadius: '6px', border: '1px solid #ccc', fontSize: '13px' }} />
-                                <button onClick={() => handleSendCustomMsg(userApp, 'to')} style={{ padding: '8px 15px', background: '#18181b', color: '#fff', border: 'none', borderRadius: '6px', fontWeight: 'bold' }}>{t.sendBtn}</button>
+                                <button onClick={() => handleSendCustomMsg(userApp, 'to')} style={{ padding: '8px 15px', background: '#18181b', color: '#fff', border: 'none', borderRadius: '6px', fontWeight: 'bold', cursor: 'pointer' }}>{t.sendBtn}</button>
                               </div>
                             </div>
                           )}
 
-                          {/* Rider View */}
+                          {/* 탑승자 화면 */}
                           {userApp?.role === 'rider' && (
                             <div style={{ background: '#f8fafc', padding: '15px', borderRadius: '8px', marginBottom: '15px' }}>
                               <h5 style={{ margin: '0 0 10px 0', fontSize: '14px' }}>{t.myAssignment}</h5>
@@ -521,24 +529,26 @@ export default function Home() {
                                 <div style={{ marginBottom: '15px' }}>
                                   <span style={{ fontSize: '12px', fontWeight: 'bold', color: '#64748b' }}>{t.toEvt} ({t.driverTxt}: {driverDetails[userApp.carIdTo]?.name || '...'})</span>
                                   {driverDetails[userApp.carIdTo]?.statusTo && <div style={{ background: '#fee2e2', color: '#b91c1c', padding: '6px 10px', borderRadius: '6px', fontSize: '12px', fontWeight: 'bold', margin: '5px 0' }}>{t.statusTxt}: {displayStatus(driverDetails[userApp.carIdTo].statusTo)}</div>}
-                                  <div style={{ display: 'flex', gap: '5px', marginTop: '5px' }}><button onClick={() => updateStatus(userApp, 'to', 'Waiting at pickup area')} style={{ flex: 1, padding: '8px', background: '#f1f5f9', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '12px', fontWeight: 'bold' }}>{t.waitPickup}</button></div>
+                                  
+                                  <div style={{ display: 'flex', gap: '5px', marginTop: '5px' }}>
+                                    <button onClick={() => updateStatus(userApp, 'to', 'Waiting at pickup area')} style={{ flex: 1, padding: '8px', background: '#f1f5f9', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '12px', fontWeight: 'bold', cursor: 'pointer' }}>{t.waitPickup}</button>
+                                  </div>
                                   <div style={{ display: 'flex', gap: '5px', marginTop: '5px' }}>
                                     <input type="text" placeholder={t.msgPlaceholder} value={customMsg[`${userApp.id}_to`] || ''} onChange={e => setCustomMsg({...customMsg, [`${userApp.id}_to`]: e.target.value})} style={{ flex: 1, padding: '8px', borderRadius: '6px', border: '1px solid #ccc', fontSize: '13px' }} />
-                                    <button onClick={() => handleSendCustomMsg(userApp, 'to')} style={{ padding: '8px 15px', background: '#18181b', color: '#fff', border: 'none', borderRadius: '6px', fontWeight: 'bold' }}>{t.sendBtn}</button>
+                                    <button onClick={() => handleSendCustomMsg(userApp, 'to')} style={{ padding: '8px 15px', background: '#18181b', color: '#fff', border: 'none', borderRadius: '6px', fontWeight: 'bold', cursor: 'pointer' }}>{t.sendBtn}</button>
                                   </div>
                                 </div>
                               )}
                             </div>
                           )}
 
-                          {/* Apply / Cancel Buttons */}
                           <div style={{ display: 'flex', gap: '10px' }}>
-                            {!userApp ? ( 
-                              <button onClick={() => handleApply(event)} style={{ flex: 1, padding: '12px', background: '#2563eb', color: '#fff', border: 'none', borderRadius: '8px', fontWeight: 'bold' }}>{t.applyBtn}</button>
+                            {!userApp ? (
+                              <button onClick={() => handleApply(event)} style={{ flex: 1, padding: '12px', background: '#2563eb', color: '#fff', border: 'none', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer' }}>{t.applyBtn}</button>
                             ) : (
                               <>
                                 <div style={{ flex: 1, padding: '12px', background: '#10b981', color: '#fff', textAlign: 'center', borderRadius: '8px', fontWeight: 'bold' }}>{t.appliedBtn}</div>
-                                <button onClick={() => handleCancelApplication(event.id)} style={{ flex: 1, padding: '12px', background: '#f4f4f5', color: '#ef4444', border: '1px solid #fecaca', borderRadius: '8px', fontWeight: 'bold' }}>{t.cancelBtn}</button>
+                                <button onClick={() => handleCancelApplication(event.id)} style={{ flex: 1, padding: '12px', background: '#f4f4f5', color: '#ef4444', border: '1px solid #fecaca', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer' }}>{t.cancelBtn}</button>
                               </>
                             )}
                           </div>
@@ -550,8 +560,8 @@ export default function Home() {
                 )}
               </div>
             )}
-            
-            {/* Profile Tab */}
+
+            {/* -------------------- PROFILE TAB (버튼 복구 완료!) -------------------- */}
             {currentTab === 'profile' && (
               <div style={{ background: '#ffffff', padding: '25px', borderRadius: '12px' }}>
                 <h2 style={{ margin: '0 0 20px 0', fontSize: '18px' }}>{t.myProfile}</h2>
@@ -561,7 +571,7 @@ export default function Home() {
                   <p style={{ margin: '0 0 10px 0', fontSize: '14px' }}><strong>{t.address}:</strong> {profile.address}</p>
                   <p style={{ margin: '0 0 10px 0', fontSize: '14px' }}><strong>{t.rideType}:</strong> {profile.rideType}</p>
                   
-                  {/* Enable Push Notifications Button */}
+                  {/* 푸시 알림 권한 요청 버튼 */}
                   <div style={{ marginTop: '15px', paddingTop: '15px', borderTop: '1px solid #e2e8f0' }}>
                     <button onClick={requestNotificationPermission} style={{ width: '100%', padding: '10px', background: '#0284c7', color: 'white', border: 'none', borderRadius: '6px', fontSize: '13px', fontWeight: 'bold', cursor: 'pointer' }}>
                       {t.enablePush}
@@ -569,35 +579,44 @@ export default function Home() {
                     {notificationStatus && <p style={{ margin: '8px 0 0 0', fontSize: '12px', color: '#475569' }}>{notificationStatus}</p>}
                   </div>
                 </div>
-                <button onClick={handleLogout} style={{ width: '100%', padding: '12px', background: '#f4f4f5', color: '#ef4444', border: '1px solid #fecaca', borderRadius: '8px', fontWeight: 'bold' }}>{t.signOut}</button>
+                <button onClick={handleLogout} style={{ width: '100%', padding: '12px', background: '#f4f4f5', color: '#ef4444', border: '1px solid #fecaca', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer' }}>{t.signOut}</button>
               </div>
             )}
             
-            {/* Guide Tab */}
+            {/* -------------------- GUIDE TAB -------------------- */}
             {currentTab === 'guide' && (
               <div style={{ background: '#ffffff', padding: '25px', borderRadius: '12px', border: '1px solid #e4e4e7' }}>
                 <h2 style={{ margin: '0 0 20px 0', fontSize: '18px' }}>{t.guideTitle}</h2>
-                <div style={{ marginBottom: '20px' }}><h3 style={{ fontSize: '15px', color: '#2563eb', marginBottom: '8px' }}>{t.g1T}</h3><p style={{ fontSize: '14px', lineHeight: '1.6', color: '#555', whiteSpace: 'pre-line' }}>{t.g1D}</p></div>
-                <div style={{ marginBottom: '20px' }}><h3 style={{ fontSize: '15px', color: '#2563eb', marginBottom: '8px' }}>{t.g2T}</h3><p style={{ fontSize: '14px', lineHeight: '1.6', color: '#555', whiteSpace: 'pre-line' }}>{t.g2D}</p></div>
-                <div style={{ marginBottom: '20px' }}><h3 style={{ fontSize: '15px', color: '#2563eb', marginBottom: '8px' }}>{t.g3T}</h3><p style={{ fontSize: '14px', lineHeight: '1.6', color: '#555', whiteSpace: 'pre-line' }}>{t.g3D}</p></div>
+                <div style={{ marginBottom: '20px' }}>
+                  <h3 style={{ fontSize: '15px', color: '#2563eb', marginBottom: '8px' }}>{t.g1T}</h3>
+                  <p style={{ fontSize: '14px', lineHeight: '1.6', color: '#555', whiteSpace: 'pre-line' }}>{t.g1D}</p>
+                </div>
+                <div style={{ marginBottom: '20px' }}>
+                  <h3 style={{ fontSize: '15px', color: '#2563eb', marginBottom: '8px' }}>{t.g2T}</h3>
+                  <p style={{ fontSize: '14px', lineHeight: '1.6', color: '#555', whiteSpace: 'pre-line' }}>{t.g2D}</p>
+                </div>
+                <div style={{ marginBottom: '20px' }}>
+                  <h3 style={{ fontSize: '15px', color: '#2563eb', marginBottom: '8px' }}>{t.g3T}</h3>
+                  <p style={{ fontSize: '14px', lineHeight: '1.6', color: '#555', whiteSpace: 'pre-line' }}>{t.g3D}</p>
+                </div>
               </div>
             )}
 
-            {/* Admin Tab */}
+            {/* -------------------- ADMIN TAB -------------------- */}
             {currentTab === 'admin' && profile.isAdmin && (
               <div>
                 <div style={{ display: 'flex', gap: '10px', marginBottom: '20px' }}>
-                  <button onClick={() => setAdminMode('create')} style={{ flex: 1, padding: '10px', borderRadius: '8px', border: 'none', background: adminMode === 'create' ? '#18181b' : '#e4e4e7', color: adminMode === 'create' ? '#fff' : '#71717a', fontWeight: 'bold' }}>{t.adminNew}</button>
-                  <button onClick={() => setAdminMode('assign')} style={{ flex: 1, padding: '10px', borderRadius: '8px', border: 'none', background: adminMode === 'assign' ? '#18181b' : '#e4e4e7', color: adminMode === 'assign' ? '#fff' : '#71717a', fontWeight: 'bold' }}>{t.adminAssign}</button>
+                  <button onClick={() => setAdminMode('create')} style={{ flex: 1, padding: '10px', borderRadius: '8px', border: 'none', background: adminMode === 'create' ? '#18181b' : '#e4e4e7', color: adminMode === 'create' ? '#fff' : '#71717a', fontWeight: 'bold', cursor: 'pointer' }}>{t.adminNew}</button>
+                  <button onClick={() => setAdminMode('assign')} style={{ flex: 1, padding: '10px', borderRadius: '8px', border: 'none', background: adminMode === 'assign' ? '#18181b' : '#e4e4e7', color: adminMode === 'assign' ? '#fff' : '#71717a', fontWeight: 'bold', cursor: 'pointer' }}>{t.adminAssign}</button>
                 </div>
 
                 {adminMode === 'create' ? (
                   <div style={{ background: '#ffffff', padding: '20px', borderRadius: '12px' }}>
                     <form onSubmit={handleCreateEvent}>
-                      <div style={{ marginBottom: '15px' }}><label>{t.titleL}</label><input required value={newEvent.title} onChange={e => setNewEvent({...newEvent, title: e.target.value})} style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #ccc' }} /></div>
-                      <div style={{ marginBottom: '15px' }}><label>{t.dateL}</label><input required type="date" value={newEvent.date} onChange={e => setNewEvent({...newEvent, date: e.target.value})} style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #ccc' }} /></div>
-                      <div style={{ marginBottom: '15px' }}><label>{t.destL}</label><input required value={newEvent.destination} onChange={e => setNewEvent({...newEvent, destination: e.target.value})} style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #ccc' }} /></div>
-                      <button type="submit" style={{ width: '100%', padding: '12px', background: '#3b82f6', color: 'white', borderRadius: '8px', fontWeight: 'bold' }}>{creatingEvent ? t.creatingBtn : t.createBtn}</button>
+                      <div style={{ marginBottom: '15px' }}><label style={{ display: 'block', fontSize: '13px', fontWeight: 'bold', marginBottom: '5px' }}>{t.titleL}</label><input required value={newEvent.title} onChange={e => setNewEvent({...newEvent, title: e.target.value})} style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #ccc' }} /></div>
+                      <div style={{ marginBottom: '15px' }}><label style={{ display: 'block', fontSize: '13px', fontWeight: 'bold', marginBottom: '5px' }}>{t.dateL}</label><input required type="date" value={newEvent.date} onChange={e => setNewEvent({...newEvent, date: e.target.value})} style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #ccc' }} /></div>
+                      <div style={{ marginBottom: '15px' }}><label style={{ display: 'block', fontSize: '13px', fontWeight: 'bold', marginBottom: '5px' }}>{t.destL}</label><input required value={newEvent.destination} onChange={e => setNewEvent({...newEvent, destination: e.target.value})} style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #ccc' }} /></div>
+                      <button type="submit" style={{ width: '100%', padding: '12px', background: '#3b82f6', color: 'white', borderRadius: '8px', fontWeight: 'bold', border: 'none', cursor: 'pointer' }}>{creatingEvent ? t.creatingBtn : t.createBtn}</button>
                     </form>
                   </div>
                 ) : (
@@ -610,8 +629,8 @@ export default function Home() {
                     {adminSelectedEventId && (
                       <>
                         <div style={{ display: 'flex', background: '#e4e4e7', padding: '4px', borderRadius: '10px', marginBottom: '20px' }}>
-                          <button onClick={() => setRideDirection('to')} style={{ flex: 1, padding: '10px', borderRadius: '8px', border: 'none', background: rideDirection === 'to' ? '#fff' : 'transparent', fontWeight: 'bold' }}>{t.toEvt}</button>
-                          <button onClick={() => setRideDirection('from')} style={{ flex: 1, padding: '10px', borderRadius: '8px', border: 'none', background: rideDirection === 'from' ? '#fff' : 'transparent', fontWeight: 'bold' }}>{t.fromEvt}</button>
+                          <button onClick={() => setRideDirection('to')} style={{ flex: 1, padding: '10px', borderRadius: '8px', border: 'none', background: rideDirection === 'to' ? '#fff' : 'transparent', fontWeight: 'bold', cursor: 'pointer' }}>{t.toEvt}</button>
+                          <button onClick={() => setRideDirection('from')} style={{ flex: 1, padding: '10px', borderRadius: '8px', border: 'none', background: rideDirection === 'from' ? '#fff' : 'transparent', fontWeight: 'bold', cursor: 'pointer' }}>{t.fromEvt}</button>
                         </div>
 
                         <div onDragOver={(e) => { e.preventDefault(); setDragOverCarId('waiting'); }} onDrop={(e) => handleDrop(e, null)} style={{ background: dragOverCarId === 'waiting' ? '#f3f4f6' : '#fff', padding: '15px', borderRadius: '12px', border: '1px solid #e4e4e7', marginBottom: '20px', minHeight: '100px' }}>
@@ -632,7 +651,7 @@ export default function Home() {
                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
                                   <div style={{ fontWeight: 'bold' }}>{driver.isVan ? <span style={{ color: '#2563eb' }}>[Van] </span> : 'Car: '}{driver.name}</div>
                                   <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                                    <button onClick={() => openNavigation(driver.id)} style={{ padding: '6px 10px', background: '#18181b', color: '#fff', border: 'none', borderRadius: '6px', fontSize: '12px', fontWeight: 'bold' }}>{t.mapNav}</button>
+                                    <button onClick={() => openNavigation(driver.id)} style={{ padding: '6px 10px', background: '#18181b', color: '#fff', border: 'none', borderRadius: '6px', fontSize: '12px', fontWeight: 'bold', cursor: 'pointer' }}>{t.mapNav}</button>
                                     <span style={{ color: isFull ? '#ef4444' : '#166534', fontWeight: 'bold' }}>{passengers.length} / {driver.capacity}</span>
                                   </div>
                                 </div>
@@ -653,13 +672,13 @@ export default function Home() {
         )}
       </main>
 
-      {/* Bottom Navigation */}
+      {/* -------------------- BOTTOM NAVIGATION -------------------- */}
       {user && profile && (
         <nav style={{ position: 'fixed', bottom: 0, left: '50%', transform: 'translateX(-50%)', width: '100%', maxWidth: '480px', background: '#ffffff', display: 'flex', borderTop: '1px solid #e4e4e7' }}>
-          <button onClick={() => setCurrentTab('calendar')} style={{ flex: 1, padding: '15px 0', background: 'none', border: 'none', color: currentTab === 'calendar' ? '#18181b' : '#a1a1aa', fontWeight: currentTab === 'calendar' ? 'bold' : 'normal', fontSize: '13px' }}>{t.navCal}</button>
-          <button onClick={() => setCurrentTab('profile')} style={{ flex: 1, padding: '15px 0', background: 'none', border: 'none', color: currentTab === 'profile' ? '#18181b' : '#a1a1aa', fontWeight: currentTab === 'profile' ? 'bold' : 'normal', fontSize: '13px' }}>{t.navProf}</button>
-          <button onClick={() => setCurrentTab('guide')} style={{ flex: 1, padding: '15px 0', background: 'none', border: 'none', color: currentTab === 'guide' ? '#18181b' : '#a1a1aa', fontWeight: currentTab === 'guide' ? 'bold' : 'normal', fontSize: '13px' }}>{t.navGuide}</button>
-          {profile.isAdmin && <button onClick={() => setCurrentTab('admin')} style={{ flex: 1, padding: '15px 0', background: 'none', border: 'none', color: currentTab === 'admin' ? '#18181b' : '#a1a1aa', fontWeight: currentTab === 'admin' ? 'bold' : 'normal', fontSize: '13px' }}>{t.navAdmin}</button>}
+          <button onClick={() => setCurrentTab('calendar')} style={{ flex: 1, padding: '15px 0', background: 'none', border: 'none', color: currentTab === 'calendar' ? '#18181b' : '#a1a1aa', fontWeight: currentTab === 'calendar' ? 'bold' : 'normal', fontSize: '13px', cursor: 'pointer' }}>{t.navCal}</button>
+          <button onClick={() => setCurrentTab('profile')} style={{ flex: 1, padding: '15px 0', background: 'none', border: 'none', color: currentTab === 'profile' ? '#18181b' : '#a1a1aa', fontWeight: currentTab === 'profile' ? 'bold' : 'normal', fontSize: '13px', cursor: 'pointer' }}>{t.navProf}</button>
+          <button onClick={() => setCurrentTab('guide')} style={{ flex: 1, padding: '15px 0', background: 'none', border: 'none', color: currentTab === 'guide' ? '#18181b' : '#a1a1aa', fontWeight: currentTab === 'guide' ? 'bold' : 'normal', fontSize: '13px', cursor: 'pointer' }}>{t.navGuide}</button>
+          {profile.isAdmin && <button onClick={() => setCurrentTab('admin')} style={{ flex: 1, padding: '15px 0', background: 'none', border: 'none', color: currentTab === 'admin' ? '#18181b' : '#a1a1aa', fontWeight: currentTab === 'admin' ? 'bold' : 'normal', fontSize: '13px', cursor: 'pointer' }}>{t.navAdmin}</button>}
         </nav>
       )}
     </div>
