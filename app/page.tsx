@@ -47,11 +47,9 @@ export default function Home() {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [currentTab, setCurrentTab] = useState<'calendar' | 'profile' | 'admin'>('calendar');
   
-  // Calendar states
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
 
-  // Profile form state
   const [formData, setFormData] = useState({
     name: '',
     phone: '',
@@ -63,7 +61,6 @@ export default function Home() {
   const [saving, setSaving] = useState(false);
   const [notificationStatus, setNotificationStatus] = useState<string>('');
 
-  // Events and Applications state
   const [events, setEvents] = useState<ChurchEvent[]>([]);
   const [userApplications, setUserApplications] = useState<Record<string, Application>>({});
   const [driverDetails, setDriverDetails] = useState<Record<string, Application>>({});
@@ -77,7 +74,6 @@ export default function Home() {
   });
   const [creatingEvent, setCreatingEvent] = useState(false);
 
-  // Admin Assignment States
   const [adminMode, setAdminMode] = useState<'create' | 'assign'>('create');
   const [adminSelectedEventId, setAdminSelectedEventId] = useState<string>('');
   const [eventAttendees, setEventAttendees] = useState<Application[]>([]);
@@ -96,7 +92,7 @@ export default function Home() {
 
         querySnapshot.forEach(docSnap => {
           const data = docSnap.data() as Application;
-          appliedMap[data.eventId] = { id: docSnap.id, ...data };
+          appliedMap[data.eventId] = { ...data, id: docSnap.id };
           if (data.carIdTo) driverIds.add(data.carIdTo);
           if (data.carIdFrom) driverIds.add(data.carIdFrom);
         });
@@ -107,7 +103,8 @@ export default function Home() {
         for (const dId of Array.from(driverIds)) {
           const dSnap = await getDoc(doc(db, 'applications', dId));
           if (dSnap.exists()) {
-            drivers[dId] = { id: dSnap.id, ...dSnap.data() } as Application;
+            const dData = dSnap.data() as Application;
+            drivers[dId] = { ...dData, id: dSnap.id };
           }
         }
         setDriverDetails(prev => ({ ...prev, ...drivers }));
@@ -119,7 +116,7 @@ export default function Home() {
         snapshot.forEach(docSnap => {
           const data = docSnap.data() as Application;
           if (data.carIdTo?.endsWith(uid) || data.carIdFrom?.endsWith(uid)) {
-            passengers.push({ id: docSnap.id, ...data });
+            passengers.push({ ...data, id: docSnap.id });
           }
         });
         setMyPassengers(passengers);
@@ -133,7 +130,6 @@ export default function Home() {
         await fetchEvents();
         setupRealtime(currentUser.uid);
 
-        // Foreground FCM listener
         if (messaging) {
           onMessage(messaging, (payload) => {
             alert(`[Notification] ${payload.notification?.title}: ${payload.notification?.body}`);
@@ -210,9 +206,9 @@ export default function Home() {
     try {
       const q = query(collection(db, 'events'), orderBy('date', 'asc'));
       const querySnapshot = await getDocs(q);
-      const eventsData = querySnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
+      const eventsData = querySnapshot.docs.map(docSnap => ({
+        ...docSnap.data(),
+        id: docSnap.id
       })) as ChurchEvent[];
       setEvents(eventsData);
     } catch (error) {
@@ -225,8 +221,8 @@ export default function Home() {
       const q = query(collection(db, 'applications'), where('eventId', '==', eventId));
       onSnapshot(q, (snapshot) => {
         const attendees = snapshot.docs.map(docSnap => ({
-          id: docSnap.id,
-          ...docSnap.data()
+          ...docSnap.data(),
+          id: docSnap.id
         })) as Application[];
         setEventAttendees(attendees);
       });
@@ -602,7 +598,6 @@ export default function Home() {
                   <p style={{ margin: '0 0 10px 0', fontSize: '14px' }}><strong style={{ color: '#555' }}>Ride Type:</strong> {profile.rideType}</p>
                   {profile.isVan && <p style={{ margin: '0 0 10px 0', fontSize: '14px', color: '#2563eb', fontWeight: 'bold' }}>Church Van Driver</p>}
                   
-                  {/* Push Notification Toggle Button */}
                   <div style={{ marginTop: '15px', paddingTop: '15px', borderTop: '1px solid #e2e8f0' }}>
                     <button onClick={requestNotificationPermission} style={{ width: '100%', padding: '10px', background: '#0284c7', color: 'white', border: 'none', borderRadius: '6px', fontSize: '13px', fontWeight: 'bold', cursor: 'pointer' }}>
                       Enable Push Notifications
