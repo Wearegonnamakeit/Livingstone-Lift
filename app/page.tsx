@@ -124,7 +124,19 @@ export default function Home() {
   const [customMsg, setCustomMsg] = useState<Record<string, string>>({});
   const prevAppsRef = useRef<Record<string, Application>>({});
 
-  // 브라우저 내부 알림 (앱이 켜져있을 때 팝업)
+  // Service Worker Registration
+  useEffect(() => {
+    if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/firebase-messaging-sw.js')
+        .then((registration) => {
+          console.log('Service Worker registered with scope:', registration.scope);
+        })
+        .catch((err) => {
+          console.error('Service Worker registration failed:', err);
+        });
+    }
+  }, []);
+
   const showLocalNotification = (title: string, body: string) => {
     if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted') {
       new Notification(title, { body, icon: '/icon.png' });
@@ -157,13 +169,11 @@ export default function Home() {
           const prevData = prevAppsRef.current[data.id];
           
           if (change.type === 'modified' && prevData) {
-            // 알림: 차량 배정 완료
             if (data.userId === uid && data.role === 'rider') {
               if (!prevData.carIdTo && data.carIdTo) {
                 showLocalNotification(t.assignedTitle, t.assignedBody);
               }
             }
-            // 알림: 운전자의 상태 업데이트 감지
             if (data.role === 'driver') {
               const myApp = appliedMap[data.eventId];
               if (myApp && myApp.carIdTo === data.id) {
@@ -189,7 +199,6 @@ export default function Home() {
         await fetchEvents();
         setupRealtime(currentUser.uid);
         
-        // 포그라운드(앱이 열려있을 때) 알림 수신
         if (messaging) {
           onMessage(messaging, (payload) => {
             const title = payload.notification?.title || 'Livingstone Lift';
@@ -208,7 +217,6 @@ export default function Home() {
     return () => { unsubscribeAuth(); };
   }, [lang]);
 
-  // 푸시 알림 권한 요청 (안전장치 추가)
   const requestNotificationPermission = async () => {
     if (typeof window === 'undefined' || !('Notification' in window)) {
       alert(lang === 'ko' ? '아이폰은 화면 하단 공유 버튼을 눌러 [홈 화면에 추가]를 해야 푸시 알림을 켤 수 있습니다.' : 'Please add this app to your Home Screen to enable push notifications.');
@@ -274,7 +282,6 @@ export default function Home() {
   const handleLogin = () => signInWithPopup(auth, googleProvider);
   const handleLogout = () => { signOut(auth); setProfile(null); setCurrentTab('calendar'); };
   
-  // 새로고침 함수
   const handleRefresh = () => {
     window.location.reload();
   };
@@ -316,7 +323,6 @@ export default function Home() {
     try { await updateDoc(doc(db, 'applications', appId), { isVan, capacity }); } catch (error) { console.error(error); }
   };
 
-  // 백엔드 API 호출로 푸시 알림 발송
   const sendPushToUser = async (targetUserId: string, title: string, body: string) => {
     try {
       const snap = await getDoc(doc(db, 'users', targetUserId));
@@ -338,14 +344,12 @@ export default function Home() {
       const title = isCustomMsg ? t.newMsg : t.alertTitle;
       const body = `${userApp.name}: ${statusMsg}`;
       
-      // 운전자가 업데이트 -> 모든 탑승자에게 알림
       if (userApp.role === 'driver') {
         const passengers = eventAttendees.filter(a => direction === 'to' ? a.carIdTo === userApp.id : a.carIdFrom === userApp.id);
         for (const p of passengers) {
           await sendPushToUser(p.userId, title, body);
         }
       } else {
-        // 탑승자가 업데이트 -> 담당 운전자에게 알림
         const driverAppId = direction === 'to' ? userApp.carIdTo : userApp.carIdFrom;
         const driverApp = eventAttendees.find(a => a.id === driverAppId);
         if (driverApp) await sendPushToUser(driverApp.userId, title, body);
@@ -377,7 +381,6 @@ export default function Home() {
     }
     await updateDoc(doc(db, 'applications', passengerId), { [rideDirection === 'to' ? 'carIdTo' : 'carIdFrom']: carId });
     
-    // 배정 완료 후 탑승자에게 푸시 전송
     const pSnap = await getDoc(doc(db, 'applications', passengerId));
     const pUserId = pSnap.data()?.userId;
     if (pUserId && carId) await sendPushToUser(pUserId, t.assignedTitle, t.assignedBody);
@@ -405,7 +408,6 @@ export default function Home() {
   return (
     <div style={{ width: '100%', maxWidth: '480px', margin: '0 auto', background: '#f4f4f5', minHeight: '100vh', paddingBottom: '80px', fontFamily: 'sans-serif' }}>
       
-      {/* -------------------- HEADER -------------------- */}
       <header style={{ background: '#ffffff', padding: '15px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid #e4e4e7' }}>
         <h1 style={{ margin: 0, fontSize: '18px', color: '#18181b', fontWeight: 'bold' }}>{t.appTitle}</h1>
         <div style={{ display: 'flex', gap: '8px' }}>
@@ -419,7 +421,6 @@ export default function Home() {
       </header>
 
       <main style={{ padding: '20px' }}>
-        {/* -------------------- LOGIN / PROFILE CREATION -------------------- */}
         {!user ? (
           <div style={{ background: '#ffffff', padding: '30px', borderRadius: '12px', textAlign: 'center' }}>
             <p style={{ marginBottom: '20px' }}>{t.loginReq}</p>
@@ -454,7 +455,6 @@ export default function Home() {
           </div>
         ) : (
           <>
-            {/* -------------------- CALENDAR TAB -------------------- */}
             {currentTab === 'calendar' && (
               <div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', background: '#fff', padding: '15px', borderRadius: '16px' }}>
@@ -489,7 +489,6 @@ export default function Home() {
                           <span style={{ fontSize: '12px', background: event.type === 'regular' ? '#dbeafe' : '#fce7f3', color: event.type === 'regular' ? '#1d4ed8' : '#be185d', padding: '5px 10px', borderRadius: '12px', fontWeight: 'bold' }}>{event.type === 'regular' ? t.regular : t.special}</span>
                           <h4 style={{ margin: '12px 0', fontSize: '18px' }}>{event.title}</h4>
                           
-                          {/* 운전자 화면 */}
                           {userApp?.role === 'driver' && (
                             <div style={{ marginBottom: '15px', background: '#f8fafc', padding: '15px', borderRadius: '8px' }}>
                               <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '15px' }}>
@@ -521,7 +520,6 @@ export default function Home() {
                             </div>
                           )}
 
-                          {/* 탑승자 화면 */}
                           {userApp?.role === 'rider' && (
                             <div style={{ background: '#f8fafc', padding: '15px', borderRadius: '8px', marginBottom: '15px' }}>
                               <h5 style={{ margin: '0 0 10px 0', fontSize: '14px' }}>{t.myAssignment}</h5>
@@ -561,7 +559,6 @@ export default function Home() {
               </div>
             )}
 
-            {/* -------------------- PROFILE TAB (버튼 복구 완료!) -------------------- */}
             {currentTab === 'profile' && (
               <div style={{ background: '#ffffff', padding: '25px', borderRadius: '12px' }}>
                 <h2 style={{ margin: '0 0 20px 0', fontSize: '18px' }}>{t.myProfile}</h2>
@@ -571,7 +568,6 @@ export default function Home() {
                   <p style={{ margin: '0 0 10px 0', fontSize: '14px' }}><strong>{t.address}:</strong> {profile.address}</p>
                   <p style={{ margin: '0 0 10px 0', fontSize: '14px' }}><strong>{t.rideType}:</strong> {profile.rideType}</p>
                   
-                  {/* 푸시 알림 권한 요청 버튼 */}
                   <div style={{ marginTop: '15px', paddingTop: '15px', borderTop: '1px solid #e2e8f0' }}>
                     <button onClick={requestNotificationPermission} style={{ width: '100%', padding: '10px', background: '#0284c7', color: 'white', border: 'none', borderRadius: '6px', fontSize: '13px', fontWeight: 'bold', cursor: 'pointer' }}>
                       {t.enablePush}
@@ -583,7 +579,6 @@ export default function Home() {
               </div>
             )}
             
-            {/* -------------------- GUIDE TAB -------------------- */}
             {currentTab === 'guide' && (
               <div style={{ background: '#ffffff', padding: '25px', borderRadius: '12px', border: '1px solid #e4e4e7' }}>
                 <h2 style={{ margin: '0 0 20px 0', fontSize: '18px' }}>{t.guideTitle}</h2>
@@ -602,7 +597,6 @@ export default function Home() {
               </div>
             )}
 
-            {/* -------------------- ADMIN TAB -------------------- */}
             {currentTab === 'admin' && profile.isAdmin && (
               <div>
                 <div style={{ display: 'flex', gap: '10px', marginBottom: '20px' }}>
@@ -672,7 +666,6 @@ export default function Home() {
         )}
       </main>
 
-      {/* -------------------- BOTTOM NAVIGATION -------------------- */}
       {user && profile && (
         <nav style={{ position: 'fixed', bottom: 0, left: '50%', transform: 'translateX(-50%)', width: '100%', maxWidth: '480px', background: '#ffffff', display: 'flex', borderTop: '1px solid #e4e4e7' }}>
           <button onClick={() => setCurrentTab('calendar')} style={{ flex: 1, padding: '15px 0', background: 'none', border: 'none', color: currentTab === 'calendar' ? '#18181b' : '#a1a1aa', fontWeight: currentTab === 'calendar' ? 'bold' : 'normal', fontSize: '13px', cursor: 'pointer' }}>{t.navCal}</button>
