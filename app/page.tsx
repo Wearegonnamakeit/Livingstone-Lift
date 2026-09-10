@@ -1,14 +1,48 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { signInWithPopup, signOut, onAuthStateChanged, User } from 'firebase/auth';
 import { doc, getDoc, setDoc, collection, addDoc, getDocs, query, orderBy, serverTimestamp, deleteDoc, where, updateDoc, onSnapshot } from 'firebase/firestore';
 import { auth, googleProvider, db, messaging, getToken, onMessage } from '../lib/firebase';
 
-interface UserProfile { name: string; phone: string; address: string; rideType: string; capacity: string; isAdmin: boolean; isVan?: boolean; fcmToken?: string; }
-interface ChurchEvent { id: string; title: string; date: string; destination: string; type: 'regular' | 'special'; }
-interface Application { id: string; eventId: string; userId: string; name: string; phone: string; address: string; rideType: string; capacity: string; role: 'driver' | 'rider'; carIdTo: string | null; carIdFrom: string | null; statusTo: string; statusFrom: string; isVan?: boolean; }
+// Interfaces for TypeScript typing
+interface UserProfile {
+  name: string;
+  phone: string;
+  address: string;
+  rideType: string;
+  capacity: string;
+  isAdmin: boolean;
+  isVan?: boolean;
+  fcmToken?: string;
+}
 
+interface ChurchEvent {
+  id: string;
+  title: string;
+  date: string;
+  destination: string;
+  type: 'regular' | 'special';
+}
+
+interface Application {
+  id: string;
+  eventId: string;
+  userId: string;
+  name: string;
+  phone: string;
+  address: string;
+  rideType: string;
+  capacity: string;
+  role: 'driver' | 'rider';
+  carIdTo: string | null;
+  carIdFrom: string | null;
+  statusTo: string;
+  statusFrom: string;
+  isVan?: boolean;
+}
+
+// Multi-language text dictionary
 const text = {
   en: {
     appTitle: "Livingstone Lift", loginReq: "Please log in to use the application.", loginBtn: "Sign in with Google",
@@ -26,7 +60,7 @@ const text = {
     g2T: "2. Ride Application", g2D: "Go to Calendar, select a date, and click '1-Click Apply'.",
     g3T: "3. Status Update", g3D: "Use the status buttons or type a custom message to notify your driver/passengers in real-time.",
     loading: "Loading...", msgPlaceholder: "Type message...", sendBtn: "Send", vehicleType: "Vehicle", personalCar: "Personal Car", churchVan: "Church Van (15 seats)", seats: "seats",
-    refresh: "Refresh", refreshed: "Data refreshed successfully.",
+    refresh: "Refresh", statusUpdated: "Status updated.", msgSent: "Message sent.", refreshed: "Data refreshed successfully.",
     assignedTitle: "Ride Assigned", assignedBody: "A driver has been assigned to you.", alertTitle: "Driver Update", newMsg: "New Message"
   },
   ko: {
@@ -45,11 +79,12 @@ const text = {
     g2T: "2. 라이드 신청하기", g2D: "일정(Calendar) 탭에서 날짜를 누르고 '1클릭 신청' 버튼을 누르면 신청이 완료됩니다.",
     g3T: "3. 실시간 톡/상태 알림", g3D: "출발 당일 상태 버튼을 누르거나 직접 텍스트를 입력해서 메시지를 전송하면 상대방에게 즉시 표시됩니다.",
     loading: "로딩 중...", msgPlaceholder: "메시지 직접 입력...", sendBtn: "전송", vehicleType: "운행 차량", personalCar: "개인 자가용", churchVan: "교회 밴 (15인승)", seats: "인승",
-    refresh: "새로고침", refreshed: "최신 정보로 새로고침 되었습니다.",
+    refresh: "새로고침", statusUpdated: "상태가 전송되었습니다.", msgSent: "메시지가 전송되었습니다.", refreshed: "최신 정보로 새로고침 되었습니다.",
     assignedTitle: "배차 완료", assignedBody: "차량이 성공적으로 배정되었습니다.", alertTitle: "운전자 상태 업데이트", newMsg: "새 메시지"
   }
 };
 
+// Status map for translation
 const statusMap: Record<string, {en: string, ko: string}> = {
   'Waiting at pickup area': {en: 'Waiting at pickup area', ko: '탑승 구역 대기 중'},
   'Departed': {en: 'Departed', ko: '출발함'},
@@ -57,6 +92,7 @@ const statusMap: Record<string, {en: string, ko: string}> = {
 };
 
 export default function Home() {
+  // Application states
   const [lang, setLang] = useState<'ko' | 'en'>('ko');
   const t = text[lang];
   const displayStatus = (status: string) => statusMap[status]?.[lang] || status;
@@ -66,8 +102,10 @@ export default function Home() {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [currentTab, setCurrentTab] = useState<'calendar' | 'profile' | 'admin' | 'guide'>('calendar');
+  
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
+
   const [formData, setFormData] = useState({ name: '', phone: '', address: '', rideType: 'Need a Ride', capacity: '4', isVan: false });
   const [saving, setSaving] = useState(false);
   const [notificationStatus, setNotificationStatus] = useState<string>('');
@@ -76,19 +114,35 @@ export default function Home() {
   const [userApplications, setUserApplications] = useState<Record<string, Application>>({});
   const [driverDetails, setDriverDetails] = useState<Record<string, Application>>({});
   const [myPassengers, setMyPassengers] = useState<Application[]>([]);
+  
   const [newEvent, setNewEvent] = useState({ title: '', date: '', destination: '', type: 'regular' });
   const [creatingEvent, setCreatingEvent] = useState(false);
+
   const [adminMode, setAdminMode] = useState<'create' | 'assign'>('create');
   const [adminSelectedEventId, setAdminSelectedEventId] = useState<string>('');
   const [eventAttendees, setEventAttendees] = useState<Application[]>([]);
   const [rideDirection, setRideDirection] = useState<'to' | 'from'>('to');
   const [dragOverCarId, setDragOverCarId] = useState<string | null>(null);
-  const [customMsg, setCustomMsg] = useState<Record<string, string>>({});
 
+  const [customMsg, setCustomMsg] = useState<Record<string, string>>({});
+  const prevAppsRef = useRef<Record<string, Application>>({});
+
+  // Trigger browser's native notification API if foreground
+  const showLocalNotification = (title: string, body: string) => {
+    if (Notification.permission === 'granted') {
+      new Notification(title, { body, icon: '/icon.png' });
+    } else {
+      alert(`${title}\n${body}`);
+    }
+  };
+
+  // Setup real-time listener for the applications collection
   useEffect(() => {
     let unsubscribeAll: () => void;
+
     const setupRealtime = (uid: string) => {
       const q = query(collection(db, 'applications'));
+      
       unsubscribeAll = onSnapshot(q, (snapshot) => {
         const appliedMap: Record<string, Application> = {};
         const driversMap: Record<string, Application> = {};
@@ -96,9 +150,35 @@ export default function Home() {
         
         snapshot.forEach((docSnap) => {
           const data = { ...docSnap.data(), id: docSnap.id } as Application;
+          
           if (data.userId === uid) appliedMap[data.eventId] = data;
           if (data.role === 'driver') driversMap[data.id] = data;
           if (data.carIdTo?.endsWith(uid) || data.carIdFrom?.endsWith(uid)) passengersArr.push(data);
+        });
+
+        // Check for modifications to trigger local notifications (Foreground)
+        snapshot.docChanges().forEach((change) => {
+          const data = { ...change.doc.data(), id: change.doc.id } as Application;
+          const prevData = prevAppsRef.current[data.id];
+          
+          if (change.type === 'modified' && prevData) {
+            // Notify rider if a driver was assigned
+            if (data.userId === uid && data.role === 'rider') {
+              if (!prevData.carIdTo && data.carIdTo) {
+                showLocalNotification(t.assignedTitle, t.assignedBody);
+              }
+            }
+            // Notify rider if their assigned driver changed status
+            if (data.role === 'driver') {
+              const myApp = appliedMap[data.eventId];
+              if (myApp && myApp.carIdTo === data.id) {
+                if (prevData.statusTo !== data.statusTo && data.statusTo) {
+                  showLocalNotification(t.alertTitle, data.statusTo);
+                }
+              }
+            }
+          }
+          prevAppsRef.current[data.id] = data;
         });
 
         setUserApplications(appliedMap);
@@ -114,7 +194,7 @@ export default function Home() {
         await fetchEvents();
         setupRealtime(currentUser.uid);
         
-        // 앱이 켜져있을 때 화면 상단에서 내려오는 카톡 형태의 푸시 처리
+        // Handle incoming messages when the app is in foreground
         if (messaging) {
           onMessage(messaging, (payload) => {
             const title = payload.notification?.title || 'Livingstone Lift';
@@ -129,9 +209,11 @@ export default function Home() {
         if (unsubscribeAll) unsubscribeAll();
       }
     });
+    
     return () => { unsubscribeAuth(); };
   }, [lang]);
 
+  // Request FCM token and update user profile
   const requestNotificationPermission = async () => {
     if (!messaging || !user) return;
     try {
@@ -165,6 +247,7 @@ export default function Home() {
     } catch (error) { console.error(error); }
   };
 
+  // Real-time listener for admin attendee view
   useEffect(() => {
     let unsubAdmin: () => void;
     if (adminSelectedEventId) {
@@ -175,14 +258,13 @@ export default function Home() {
     return () => { if (unsubAdmin) unsubAdmin(); };
   }, [adminSelectedEventId]);
 
+  // General App Handlers
   const handleLogin = () => signInWithPopup(auth, googleProvider);
   const handleLogout = () => { signOut(auth); setProfile(null); setCurrentTab('calendar'); };
   
-  const handleRefresh = async () => {
-    if (!user) return;
-    setIsRefreshing(true);
-    await fetchEvents(); await fetchUserProfile(user.uid);
-    setIsRefreshing(false);
+  // Hard refresh to bypass PWA cache
+  const handleRefresh = () => {
+    window.location.reload();
   };
 
   const handleSaveProfile = async (e: React.FormEvent) => {
@@ -214,36 +296,56 @@ export default function Home() {
     } catch (error) { console.error(error); }
   };
 
-  const handleCancelApplication = async (eventId: string) => { if (user) await deleteDoc(doc(db, 'applications', `${eventId}_${user.uid}`)); };
+  const handleCancelApplication = async (eventId: string) => { 
+    if (user) await deleteDoc(doc(db, 'applications', `${eventId}_${user.uid}`)); 
+  };
 
-  // 서버 API를 호출하여 진짜 푸시 알림 발송하는 함수
+  // Function to update the driver's vehicle type on the fly
+  const updateVehicle = async (appId: string, isVan: boolean, capacity: string) => {
+    try { 
+      await updateDoc(doc(db, 'applications', appId), { isVan, capacity }); 
+    } catch (error) { 
+      console.error(error); 
+    }
+  };
+
+  // Trigger backend API to send push notification
   const sendPushToUser = async (targetUserId: string, title: string, body: string) => {
     try {
       const snap = await getDoc(doc(db, 'users', targetUserId));
       const token = snap.data()?.fcmToken;
       if (token) {
-        await fetch('/api/send-notification', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ token, title, body }) });
+        await fetch('/api/send-notification', { 
+          method: 'POST', 
+          headers: { 'Content-Type': 'application/json' }, 
+          body: JSON.stringify({ token, title, body }) 
+        });
       }
     } catch (error) { console.error("Push failed", error); }
   };
 
+  // Update ride status and optionally trigger push
   const updateStatus = async (userApp: Application, direction: 'to' | 'from', statusMsg: string, isCustomMsg = false) => {
     try {
-      // 1. 상태 업데이트
       await updateDoc(doc(db, 'applications', userApp.id), { [direction === 'to' ? 'statusTo' : 'statusFrom']: statusMsg });
       
-      // 2. 푸시 알림 발송 로직
       const title = isCustomMsg ? t.newMsg : t.alertTitle;
       const body = `${userApp.name}: ${statusMsg}`;
       
+      // If driver updates status, notify all their passengers
       if (userApp.role === 'driver') {
         const passengers = eventAttendees.filter(a => direction === 'to' ? a.carIdTo === userApp.id : a.carIdFrom === userApp.id);
-        for (const p of passengers) await sendPushToUser(p.userId, title, body); // 탑승자들에게 알림
+        for (const p of passengers) {
+          await sendPushToUser(p.userId, title, body); 
+        }
       } else {
+        // If rider updates status, notify their driver
         const driverAppId = direction === 'to' ? userApp.carIdTo : userApp.carIdFrom;
         const driverApp = eventAttendees.find(a => a.id === driverAppId);
-        if (driverApp) await sendPushToUser(driverApp.userId, title, body); // 운전자에게 알림
+        if (driverApp) await sendPushToUser(driverApp.userId, title, body);
       }
+      
+      alert(isCustomMsg ? t.msgSent : t.statusUpdated);
     } catch (error) { console.error(error); }
   };
 
@@ -256,6 +358,7 @@ export default function Home() {
     }
   };
 
+  // Admin drag and drop logic
   const handleDrop = async (e: React.DragEvent, carId: string | null, capacityStr?: string) => {
     e.preventDefault(); e.stopPropagation(); setDragOverCarId(null);
     const passengerId = e.dataTransfer.getData('passengerId');
@@ -266,9 +369,10 @@ export default function Home() {
         alert(t.full); return;
       }
     }
+    
     await updateDoc(doc(db, 'applications', passengerId), { [rideDirection === 'to' ? 'carIdTo' : 'carIdFrom']: carId });
     
-    // 배정이 완료되면 해당 탑승자에게 푸시 알림 전송
+    // Notify rider of successful assignment
     const pSnap = await getDoc(doc(db, 'applications', passengerId));
     const pUserId = pSnap.data()?.userId;
     if (pUserId && carId) await sendPushToUser(pUserId, t.assignedTitle, t.assignedBody);
@@ -293,14 +397,21 @@ export default function Home() {
 
   return (
     <div style={{ width: '100%', maxWidth: '480px', margin: '0 auto', background: '#f4f4f5', minHeight: '100vh', paddingBottom: '80px', fontFamily: 'sans-serif' }}>
+      {/* Header */}
       <header style={{ background: '#ffffff', padding: '15px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid #e4e4e7' }}>
         <h1 style={{ margin: 0, fontSize: '18px', color: '#18181b', fontWeight: 'bold' }}>{t.appTitle}</h1>
         <div style={{ display: 'flex', gap: '8px' }}>
-          <button onClick={handleRefresh} disabled={isRefreshing} style={{ padding: '6px 10px', background: '#e4e4e7', borderRadius: '20px', border: 'none', fontSize: '12px', fontWeight: 'bold', cursor: 'pointer', opacity: isRefreshing ? 0.5 : 1 }}>↻ {isRefreshing ? '...' : t.refresh}</button>
-          <button onClick={() => setLang(lang === 'ko' ? 'en' : 'ko')} style={{ padding: '6px 10px', background: '#e4e4e7', borderRadius: '20px', border: 'none', fontSize: '12px', fontWeight: 'bold', cursor: 'pointer' }}>{lang === 'ko' ? 'EN' : 'KR'}</button>
+          <button onClick={handleRefresh} disabled={isRefreshing} style={{ padding: '6px 10px', background: '#e4e4e7', borderRadius: '20px', border: 'none', fontSize: '12px', fontWeight: 'bold', cursor: 'pointer', opacity: isRefreshing ? 0.5 : 1 }}>
+            [ {t.refresh} ]
+          </button>
+          <button onClick={() => setLang(lang === 'ko' ? 'en' : 'ko')} style={{ padding: '6px 10px', background: '#e4e4e7', borderRadius: '20px', border: 'none', fontSize: '12px', fontWeight: 'bold', cursor: 'pointer' }}>
+            {lang === 'ko' ? 'EN' : 'KR'}
+          </button>
         </div>
       </header>
+
       <main style={{ padding: '20px' }}>
+        {/* Authentication Flow */}
         {!user ? (
           <div style={{ background: '#ffffff', padding: '30px', borderRadius: '12px', textAlign: 'center' }}>
             <p style={{ marginBottom: '20px' }}>{t.loginReq}</p>
@@ -313,16 +424,27 @@ export default function Home() {
               <div style={{ marginBottom: '15px' }}><label>{t.name}</label><input required value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #ccc' }} /></div>
               <div style={{ marginBottom: '15px' }}><label>{t.phone}</label><input required type="tel" value={formData.phone} onChange={e => setFormData({...formData, phone: e.target.value})} style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #ccc' }} /></div>
               <div style={{ marginBottom: '15px' }}><label>{t.address}</label><input required value={formData.address} onChange={e => setFormData({...formData, address: e.target.value})} style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #ccc' }} /></div>
-              <div style={{ marginBottom: '15px' }}><label>{t.rideType}</label><select value={formData.rideType} onChange={e => setFormData({...formData, rideType: e.target.value})} style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #ccc' }}><option value="Need a Ride">{t.needRide}</option><option value="Can Drive">{t.canDrive}</option><option value="Drive Self">{t.driveSelf}</option></select></div>
+              <div style={{ marginBottom: '15px' }}>
+                <label>{t.rideType}</label>
+                <select value={formData.rideType} onChange={e => setFormData({...formData, rideType: e.target.value})} style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #ccc' }}>
+                  <option value="Need a Ride">{t.needRide}</option><option value="Can Drive">{t.canDrive}</option><option value="Drive Self">{t.driveSelf}</option>
+                </select>
+              </div>
               {formData.rideType === 'Can Drive' && (
-                <><div style={{ marginBottom: '15px' }}><label>{t.capacity}</label><input type="number" value={formData.capacity} onChange={e => setFormData({...formData, capacity: e.target.value})} style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #ccc' }} /></div>
-                <div style={{ marginBottom: '15px', display: 'flex', gap: '10px' }}><input type="checkbox" id="isVan" checked={formData.isVan} onChange={e => setFormData({...formData, isVan: e.target.checked})} /><label htmlFor="isVan" style={{ fontSize: '13px', fontWeight: 'bold' }}>{t.van}</label></div></>
+                <>
+                  <div style={{ marginBottom: '15px' }}><label>{t.capacity}</label><input type="number" value={formData.capacity} onChange={e => setFormData({...formData, capacity: e.target.value})} style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #ccc' }} /></div>
+                  <div style={{ marginBottom: '15px', display: 'flex', gap: '10px' }}>
+                    <input type="checkbox" id="isVan" checked={formData.isVan} onChange={e => setFormData({...formData, isVan: e.target.checked})} />
+                    <label htmlFor="isVan" style={{ fontSize: '13px', fontWeight: 'bold' }}>{t.van}</label>
+                  </div>
+                </>
               )}
               <button type="submit" disabled={saving} style={{ width: '100%', padding: '14px', background: '#18181b', color: 'white', borderRadius: '8px', fontWeight: 'bold' }}>{saving ? t.saving : t.save}</button>
             </form>
           </div>
         ) : (
           <>
+            {/* Calendar Tab */}
             {currentTab === 'calendar' && (
               <div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', background: '#fff', padding: '15px', borderRadius: '16px' }}>
@@ -344,6 +466,8 @@ export default function Home() {
                     })}
                   </div>
                 </div>
+
+                {/* Event Listing */}
                 {selectedDate && (
                   <div style={{ marginTop: '20px' }}>
                     <h3 style={{ fontSize: '16px', marginBottom: '10px', fontWeight: 'bold' }}>{t.scheduleTitle}</h3>
@@ -353,12 +477,22 @@ export default function Home() {
                         <div key={event.id} style={{ background: '#fff', padding: '20px', borderRadius: '16px', marginBottom: '10px' }}>
                           <span style={{ fontSize: '12px', background: event.type === 'regular' ? '#dbeafe' : '#fce7f3', color: event.type === 'regular' ? '#1d4ed8' : '#be185d', padding: '5px 10px', borderRadius: '12px', fontWeight: 'bold' }}>{event.type === 'regular' ? t.regular : t.special}</span>
                           <h4 style={{ margin: '12px 0', fontSize: '18px' }}>{event.title}</h4>
+                          
+                          {/* Driver View */}
                           {userApp?.role === 'driver' && (
                             <div style={{ marginBottom: '15px', background: '#f8fafc', padding: '15px', borderRadius: '8px' }}>
                               <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '15px' }}>
                                 <span style={{ fontSize: '13px', fontWeight: 'bold' }}>{t.vehicleType}:</span>
-                                <select value={userApp.isVan ? 'van' : 'car'} onChange={(e) => updateVehicle(userApp.id, e.target.value === 'van', e.target.value === 'van' ? '15' : profile.capacity)} style={{ padding: '6px', borderRadius: '6px', border: '1px solid #ccc', fontSize: '13px' }}>
-                                  <option value="car">{t.personalCar} ({profile.capacity}{t.seats})</option><option value="van">{t.churchVan}</option>
+                                <select 
+                                  value={userApp.isVan ? 'van' : 'car'} 
+                                  onChange={(e) => {
+                                    const isVan = e.target.value === 'van';
+                                    updateVehicle(userApp.id, isVan, isVan ? '15' : (profile?.capacity || '4'));
+                                  }} 
+                                  style={{ padding: '6px', borderRadius: '6px', border: '1px solid #ccc', fontSize: '13px' }}
+                                >
+                                  <option value="car">{t.personalCar} ({profile.capacity}{t.seats})</option>
+                                  <option value="van">{t.churchVan}</option>
                                 </select>
                               </div>
                               <h5 style={{ margin: '0 0 10px 0', fontSize: '14px' }}>{t.myPassengers}</h5>
@@ -378,6 +512,8 @@ export default function Home() {
                               </div>
                             </div>
                           )}
+
+                          {/* Rider View */}
                           {userApp?.role === 'rider' && (
                             <div style={{ background: '#f8fafc', padding: '15px', borderRadius: '8px', marginBottom: '15px' }}>
                               <h5 style={{ margin: '0 0 10px 0', fontSize: '14px' }}>{t.myAssignment}</h5>
@@ -394,10 +530,16 @@ export default function Home() {
                               )}
                             </div>
                           )}
+
+                          {/* Apply / Cancel Buttons */}
                           <div style={{ display: 'flex', gap: '10px' }}>
-                            {!userApp ? ( <button onClick={() => handleApply(event)} style={{ flex: 1, padding: '12px', background: '#2563eb', color: '#fff', border: 'none', borderRadius: '8px', fontWeight: 'bold' }}>{t.applyBtn}</button>
+                            {!userApp ? ( 
+                              <button onClick={() => handleApply(event)} style={{ flex: 1, padding: '12px', background: '#2563eb', color: '#fff', border: 'none', borderRadius: '8px', fontWeight: 'bold' }}>{t.applyBtn}</button>
                             ) : (
-                              <><div style={{ flex: 1, padding: '12px', background: '#10b981', color: '#fff', textAlign: 'center', borderRadius: '8px', fontWeight: 'bold' }}>{t.appliedBtn}</div><button onClick={() => handleCancelApplication(event.id)} style={{ flex: 1, padding: '12px', background: '#f4f4f5', color: '#ef4444', border: '1px solid #fecaca', borderRadius: '8px', fontWeight: 'bold' }}>{t.cancelBtn}</button></>
+                              <>
+                                <div style={{ flex: 1, padding: '12px', background: '#10b981', color: '#fff', textAlign: 'center', borderRadius: '8px', fontWeight: 'bold' }}>{t.appliedBtn}</div>
+                                <button onClick={() => handleCancelApplication(event.id)} style={{ flex: 1, padding: '12px', background: '#f4f4f5', color: '#ef4444', border: '1px solid #fecaca', borderRadius: '8px', fontWeight: 'bold' }}>{t.cancelBtn}</button>
+                              </>
                             )}
                           </div>
                         </div>
@@ -409,7 +551,7 @@ export default function Home() {
               </div>
             )}
             
-            {/* 복구된 프로필 & 알림 설정 탭 */}
+            {/* Profile Tab */}
             {currentTab === 'profile' && (
               <div style={{ background: '#ffffff', padding: '25px', borderRadius: '12px' }}>
                 <h2 style={{ margin: '0 0 20px 0', fontSize: '18px' }}>{t.myProfile}</h2>
@@ -419,7 +561,7 @@ export default function Home() {
                   <p style={{ margin: '0 0 10px 0', fontSize: '14px' }}><strong>{t.address}:</strong> {profile.address}</p>
                   <p style={{ margin: '0 0 10px 0', fontSize: '14px' }}><strong>{t.rideType}:</strong> {profile.rideType}</p>
                   
-                  {/* 알림 켜기 버튼 위치 복구됨 */}
+                  {/* Enable Push Notifications Button */}
                   <div style={{ marginTop: '15px', paddingTop: '15px', borderTop: '1px solid #e2e8f0' }}>
                     <button onClick={requestNotificationPermission} style={{ width: '100%', padding: '10px', background: '#0284c7', color: 'white', border: 'none', borderRadius: '6px', fontSize: '13px', fontWeight: 'bold', cursor: 'pointer' }}>
                       {t.enablePush}
@@ -431,6 +573,7 @@ export default function Home() {
               </div>
             )}
             
+            {/* Guide Tab */}
             {currentTab === 'guide' && (
               <div style={{ background: '#ffffff', padding: '25px', borderRadius: '12px', border: '1px solid #e4e4e7' }}>
                 <h2 style={{ margin: '0 0 20px 0', fontSize: '18px' }}>{t.guideTitle}</h2>
@@ -439,9 +582,15 @@ export default function Home() {
                 <div style={{ marginBottom: '20px' }}><h3 style={{ fontSize: '15px', color: '#2563eb', marginBottom: '8px' }}>{t.g3T}</h3><p style={{ fontSize: '14px', lineHeight: '1.6', color: '#555', whiteSpace: 'pre-line' }}>{t.g3D}</p></div>
               </div>
             )}
+
+            {/* Admin Tab */}
             {currentTab === 'admin' && profile.isAdmin && (
               <div>
-                <div style={{ display: 'flex', gap: '10px', marginBottom: '20px' }}><button onClick={() => setAdminMode('create')} style={{ flex: 1, padding: '10px', borderRadius: '8px', border: 'none', background: adminMode === 'create' ? '#18181b' : '#e4e4e7', color: adminMode === 'create' ? '#fff' : '#71717a', fontWeight: 'bold' }}>{t.adminNew}</button><button onClick={() => setAdminMode('assign')} style={{ flex: 1, padding: '10px', borderRadius: '8px', border: 'none', background: adminMode === 'assign' ? '#18181b' : '#e4e4e7', color: adminMode === 'assign' ? '#fff' : '#71717a', fontWeight: 'bold' }}>{t.adminAssign}</button></div>
+                <div style={{ display: 'flex', gap: '10px', marginBottom: '20px' }}>
+                  <button onClick={() => setAdminMode('create')} style={{ flex: 1, padding: '10px', borderRadius: '8px', border: 'none', background: adminMode === 'create' ? '#18181b' : '#e4e4e7', color: adminMode === 'create' ? '#fff' : '#71717a', fontWeight: 'bold' }}>{t.adminNew}</button>
+                  <button onClick={() => setAdminMode('assign')} style={{ flex: 1, padding: '10px', borderRadius: '8px', border: 'none', background: adminMode === 'assign' ? '#18181b' : '#e4e4e7', color: adminMode === 'assign' ? '#fff' : '#71717a', fontWeight: 'bold' }}>{t.adminAssign}</button>
+                </div>
+
                 {adminMode === 'create' ? (
                   <div style={{ background: '#ffffff', padding: '20px', borderRadius: '12px' }}>
                     <form onSubmit={handleCreateEvent}>
@@ -453,27 +602,43 @@ export default function Home() {
                   </div>
                 ) : (
                   <div>
-                    <select value={adminSelectedEventId} onChange={e => setAdminSelectedEventId(e.target.value)} style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid #ccc', marginBottom: '15px' }}><option value="">{t.selectEvt}</option>{events.map(ev => <option key={ev.id} value={ev.id}>{ev.date} - {ev.title}</option>)}</select>
+                    <select value={adminSelectedEventId} onChange={e => setAdminSelectedEventId(e.target.value)} style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid #ccc', marginBottom: '15px' }}>
+                      <option value="">{t.selectEvt}</option>
+                      {events.map(ev => <option key={ev.id} value={ev.id}>{ev.date} - {ev.title}</option>)}
+                    </select>
+
                     {adminSelectedEventId && (
                       <>
-                        <div style={{ display: 'flex', background: '#e4e4e7', padding: '4px', borderRadius: '10px', marginBottom: '20px' }}><button onClick={() => setRideDirection('to')} style={{ flex: 1, padding: '10px', borderRadius: '8px', border: 'none', background: rideDirection === 'to' ? '#fff' : 'transparent', fontWeight: 'bold' }}>{t.toEvt}</button><button onClick={() => setRideDirection('from')} style={{ flex: 1, padding: '10px', borderRadius: '8px', border: 'none', background: rideDirection === 'from' ? '#fff' : 'transparent', fontWeight: 'bold' }}>{t.fromEvt}</button></div>
+                        <div style={{ display: 'flex', background: '#e4e4e7', padding: '4px', borderRadius: '10px', marginBottom: '20px' }}>
+                          <button onClick={() => setRideDirection('to')} style={{ flex: 1, padding: '10px', borderRadius: '8px', border: 'none', background: rideDirection === 'to' ? '#fff' : 'transparent', fontWeight: 'bold' }}>{t.toEvt}</button>
+                          <button onClick={() => setRideDirection('from')} style={{ flex: 1, padding: '10px', borderRadius: '8px', border: 'none', background: rideDirection === 'from' ? '#fff' : 'transparent', fontWeight: 'bold' }}>{t.fromEvt}</button>
+                        </div>
+
                         <div onDragOver={(e) => { e.preventDefault(); setDragOverCarId('waiting'); }} onDrop={(e) => handleDrop(e, null)} style={{ background: dragOverCarId === 'waiting' ? '#f3f4f6' : '#fff', padding: '15px', borderRadius: '12px', border: '1px solid #e4e4e7', marginBottom: '20px', minHeight: '100px' }}>
                           <h4 style={{ margin: '0 0 10px 0' }}>{t.waitList} ({unassignedRiders.length})</h4>
-                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>{unassignedRiders.map(r => <div key={r.id} draggable onDragStart={e => e.dataTransfer.setData('passengerId', r.id)} style={{ padding: '6px 12px', background: '#f8fafc', border: '1px solid #cbd5e1', borderRadius: '20px', fontSize: '13px', fontWeight: 'bold', cursor: 'grab' }}>{r.name}</div>)}</div>
+                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                            {unassignedRiders.map(r => <div key={r.id} draggable onDragStart={e => e.dataTransfer.setData('passengerId', r.id)} style={{ padding: '6px 12px', background: '#f8fafc', border: '1px solid #cbd5e1', borderRadius: '20px', fontSize: '13px', fontWeight: 'bold', cursor: 'grab' }}>{r.name}</div>)}
+                          </div>
                         </div>
+
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
                           <h4 style={{ margin: 0 }}>{t.cars}</h4>
                           {drivers.map(driver => {
                             const passengers = riders.filter(r => rideDirection === 'to' ? r.carIdTo === driver.id : r.carIdFrom === driver.id);
-                            const isFull = passengers.length >= parseInt(driver.capacity);
+                            const isFull = passengers.length >= parseInt(driver.capacity || '4');
                             return (
                               <div key={driver.id} onDragOver={(e) => { e.preventDefault(); if(!isFull) setDragOverCarId(driver.id); }} onDrop={(e) => handleDrop(e, driver.id, driver.capacity)} style={{ background: isFull ? '#fff1f2' : (dragOverCarId === driver.id ? '#ecfdf5' : '#fff'), padding: '15px', borderRadius: '12px', border: isFull ? '2px solid #fecaca' : '1px solid #e4e4e7', position: 'relative' }}>
                                 {isFull && <div style={{ position: 'absolute', right: '-25px', top: '15px', background: '#ef4444', color: '#fff', fontSize: '11px', fontWeight: 'bold', padding: '4px 30px', transform: 'rotate(45deg)' }}>{t.full}</div>}
                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
                                   <div style={{ fontWeight: 'bold' }}>{driver.isVan ? <span style={{ color: '#2563eb' }}>[Van] </span> : 'Car: '}{driver.name}</div>
-                                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}><button onClick={() => openNavigation(driver.id)} style={{ padding: '6px 10px', background: '#18181b', color: '#fff', border: 'none', borderRadius: '6px', fontSize: '12px', fontWeight: 'bold' }}>{t.mapNav}</button><span style={{ color: isFull ? '#ef4444' : '#166534', fontWeight: 'bold' }}>{passengers.length} / {driver.capacity}</span></div>
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                    <button onClick={() => openNavigation(driver.id)} style={{ padding: '6px 10px', background: '#18181b', color: '#fff', border: 'none', borderRadius: '6px', fontSize: '12px', fontWeight: 'bold' }}>{t.mapNav}</button>
+                                    <span style={{ color: isFull ? '#ef4444' : '#166534', fontWeight: 'bold' }}>{passengers.length} / {driver.capacity}</span>
+                                  </div>
                                 </div>
-                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', minHeight: '40px', background: '#f8fafc', padding: '10px', borderRadius: '8px' }}>{passengers.map(p => <div key={p.id} draggable onDragStart={e => e.dataTransfer.setData('passengerId', p.id)} style={{ padding: '6px 12px', background: '#3b82f6', color: '#fff', borderRadius: '20px', fontSize: '13px', fontWeight: 'bold' }}>{p.name}</div>)}</div>
+                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', minHeight: '40px', background: '#f8fafc', padding: '10px', borderRadius: '8px' }}>
+                                  {passengers.map(p => <div key={p.id} draggable onDragStart={e => e.dataTransfer.setData('passengerId', p.id)} style={{ padding: '6px 12px', background: '#3b82f6', color: '#fff', borderRadius: '20px', fontSize: '13px', fontWeight: 'bold' }}>{p.name}</div>)}
+                                </div>
                               </div>
                             );
                           })}
@@ -487,6 +652,8 @@ export default function Home() {
           </>
         )}
       </main>
+
+      {/* Bottom Navigation */}
       {user && profile && (
         <nav style={{ position: 'fixed', bottom: 0, left: '50%', transform: 'translateX(-50%)', width: '100%', maxWidth: '480px', background: '#ffffff', display: 'flex', borderTop: '1px solid #e4e4e7' }}>
           <button onClick={() => setCurrentTab('calendar')} style={{ flex: 1, padding: '15px 0', background: 'none', border: 'none', color: currentTab === 'calendar' ? '#18181b' : '#a1a1aa', fontWeight: currentTab === 'calendar' ? 'bold' : 'normal', fontSize: '13px' }}>{t.navCal}</button>
