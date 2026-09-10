@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { signInWithPopup, signOut, onAuthStateChanged, User } from 'firebase/auth';
 import { doc, getDoc, setDoc, collection, addDoc, getDocs, query, orderBy, serverTimestamp, deleteDoc, where, updateDoc, onSnapshot } from 'firebase/firestore';
 import { auth, googleProvider, db, messaging, getToken, onMessage } from '../lib/firebase';
@@ -43,85 +43,49 @@ interface Application {
 
 const text = {
   en: {
-    appTitle: "Livingstone Lift",
-    loginReq: "Please log in to use the application.",
-    loginBtn: "Sign in with Google",
-    createProfile: "Create Your Profile",
-    name: "Name", phone: "Phone", address: "Address",
-    rideType: "Ride Type", capacity: "Capacity (excl. driver)",
-    needRide: "Need a Ride", canDrive: "Can Drive", driveSelf: "Drive Self",
-    van: "I occasionally drive the Church Van", save: "Save Profile", saving: "Saving...",
-    myProfile: "My Profile", signOut: "Sign Out",
-    enablePush: "Enable Push Notifications",
-    prev: "Prev", next: "Next",
-    scheduleTitle: "Schedule for Selected Date",
-    regular: "Regular Worship", special: "Special Event",
-    myAssignment: "My Assignment", driverTxt: "Driver", statusTxt: "Driver Status",
-    late5: "Late 5 min", ready: "Ready outside", waitChurch: "Waiting at church",
-    myPassengers: "My Passengers", call: "Call", noPass: "No passengers assigned yet.",
-    departed: "Departed", arr3: "3 Mins away",
-    applyBtn: "1-Click Apply", appliedBtn: "Applied", cancelBtn: "Cancel",
-    noEvent: "No events registered for this date.",
-    adminNew: "New Event", adminAssign: "Assignments",
-    titleL: "Title", dateL: "Date", destL: "Destination", typeL: "Event Type",
-    createBtn: "Create Event", creatingBtn: "Creating...",
-    selectEvt: "-- Select Event to Manage --",
-    toEvt: "To Event", fromEvt: "From Event",
-    waitList: "Waiting List", allAssig: "All assigned",
-    cars: "Cars", full: "FULL", mapNav: "Map Navi", dropHere: "Drop here", noDriv: "No drivers available.",
-    navCal: "Calendar", navProf: "Profile", navAdmin: "Admin", navGuide: "Guide",
-    guideTitle: "User Guide",
+    appTitle: "Livingstone Lift", loginReq: "Please log in to use the application.", loginBtn: "Sign in with Google",
+    createProfile: "Create Your Profile", name: "Name", phone: "Phone", address: "Address", rideType: "Ride Type", capacity: "Capacity (excl. driver)",
+    needRide: "Need a Ride", canDrive: "Can Drive", driveSelf: "Drive Self", van: "I occasionally drive the Church Van", save: "Save Profile", saving: "Saving...",
+    myProfile: "My Profile", signOut: "Sign Out", enablePush: "Enable Push Notifications", prev: "Prev", next: "Next", scheduleTitle: "Schedule for Selected Date",
+    regular: "Regular Worship", special: "Special Event", myAssignment: "My Assignment", driverTxt: "Driver", statusTxt: "Driver Status",
+    waitPickup: "Waiting at pickup area", myPassengers: "My Passengers", call: "Call", noPass: "No passengers assigned yet.",
+    departed: "Departed", arrived: "Arrived", applyBtn: "1-Click Apply", appliedBtn: "Applied", cancelBtn: "Cancel", noEvent: "No events registered for this date.",
+    adminNew: "New Event", adminAssign: "Assignments", titleL: "Title", dateL: "Date", destL: "Destination", typeL: "Event Type",
+    createBtn: "Create Event", creatingBtn: "Creating...", selectEvt: "-- Select Event to Manage --", toEvt: "To Event", fromEvt: "From Event",
+    waitList: "Waiting List", allAssig: "All assigned", cars: "Cars", full: "FULL", mapNav: "Map Navi", dropHere: "Drop here", noDriv: "No drivers available.",
+    navCal: "Calendar", navProf: "Profile", navAdmin: "Admin", navGuide: "Guide", guideTitle: "User Guide",
     g1T: "1. Install the App", g1D: "iOS: Safari Share Button > 'Add to Home Screen'\nAndroid: Chrome Menu > 'Add to Home screen'",
     g2T: "2. Ride Application", g2D: "Go to Calendar, select a date, and click '1-Click Apply'.",
     g3T: "3. Status Update", g3D: "Use the status buttons or type a custom message to notify your driver/passengers in real-time.",
-    loading: "Loading...",
-    msgPlaceholder: "Type message...", sendBtn: "Send",
-    vehicleType: "Vehicle", personalCar: "Personal Car", churchVan: "Church Van (15 seats)", seats: "seats"
+    loading: "Loading...", msgPlaceholder: "Type message...", sendBtn: "Send", vehicleType: "Vehicle", personalCar: "Personal Car", churchVan: "Church Van (15 seats)", seats: "seats",
+    refresh: "Refresh", statusUpdated: "Status updated.", msgSent: "Message sent.", refreshed: "Data refreshed.",
+    assignedTitle: "Ride Assigned", assignedBody: "A driver has been assigned to you.", alertTitle: "Driver Update"
   },
   ko: {
-    appTitle: "리빙스톤 리프트",
-    loginReq: "앱을 사용하려면 로그인해 주세요.",
-    loginBtn: "구글 계정으로 시작하기",
-    createProfile: "프로필 생성",
-    name: "이름", phone: "연락처", address: "픽업 주소",
-    rideType: "탑승 유형", capacity: "탑승 가능 인원(운전자 본인 제외)",
-    needRide: "라이드 필요", canDrive: "운전 가능", driveSelf: "개별 이동",
-    van: "상황에 따라 교회 밴도 운전합니다", save: "프로필 저장", saving: "저장 중...",
-    myProfile: "내 프로필", signOut: "로그아웃",
-    enablePush: "푸시 알림 켜기",
-    prev: "이전", next: "다음",
-    scheduleTitle: "선택된 날짜의 일정",
-    regular: "정기 예배", special: "특별 행사",
-    myAssignment: "내 탑승 정보", driverTxt: "운전자", statusTxt: "운전자 상태",
-    late5: "5분 지각", ready: "탑승 준비 완료", waitChurch: "교회 대기 중",
-    myPassengers: "내 탑승자 목록", call: "전화", noPass: "아직 배정된 탑승자가 없습니다.",
-    departed: "출발함", arr3: "3분 후 도착",
-    applyBtn: "1클릭 신청", appliedBtn: "신청 완료", cancelBtn: "신청 취소",
-    noEvent: "이 날짜에 등록된 일정이 없습니다.",
-    adminNew: "새 일정 만들기", adminAssign: "인원 배정하기",
-    titleL: "일정 이름", dateL: "날짜", destL: "목적지", typeL: "일정 종류",
-    createBtn: "일정 생성", creatingBtn: "생성 중...",
-    selectEvt: "-- 관리할 일정 선택 --",
-    toEvt: "교회로 갈 때 (To)", fromEvt: "집으로 갈 때 (From)",
-    waitList: "대기 명단", allAssig: "배정 완료",
-    cars: "차량 목록", full: "만차", mapNav: "지도 내비", dropHere: "여기로 드래그", noDriv: "가능한 운전자가 없습니다.",
-    navCal: "일정", navProf: "프로필", navAdmin: "관리자", navGuide: "설명서",
-    guideTitle: "앱 사용 설명서",
+    appTitle: "리빙스톤 리프트", loginReq: "앱을 사용하려면 로그인해 주세요.", loginBtn: "구글 계정으로 시작하기",
+    createProfile: "프로필 생성", name: "이름", phone: "연락처", address: "픽업 주소", rideType: "탑승 유형", capacity: "탑승 가능 인원(운전자 본인 제외)",
+    needRide: "라이드 필요", canDrive: "운전 가능", driveSelf: "개별 이동", van: "상황에 따라 교회 밴도 운전합니다", save: "프로필 저장", saving: "저장 중...",
+    myProfile: "내 프로필", signOut: "로그아웃", enablePush: "푸시 알림 켜기", prev: "이전", next: "다음", scheduleTitle: "선택된 날짜의 일정",
+    regular: "정기 예배", special: "특별 행사", myAssignment: "내 탑승 정보", driverTxt: "운전자", statusTxt: "운전자 상태",
+    waitPickup: "탑승 구역 대기 중", myPassengers: "내 탑승자 목록", call: "전화", noPass: "아직 배정된 탑승자가 없습니다.",
+    departed: "출발함", arrived: "도착함", applyBtn: "1클릭 신청", appliedBtn: "신청 완료", cancelBtn: "신청 취소", noEvent: "이 날짜에 등록된 일정이 없습니다.",
+    adminNew: "새 일정 만들기", adminAssign: "인원 배정하기", titleL: "일정 이름", dateL: "날짜", destL: "목적지", typeL: "일정 종류",
+    createBtn: "일정 생성", creatingBtn: "생성 중...", selectEvt: "-- 관리할 일정 선택 --", toEvt: "교회로 갈 때 (To)", fromEvt: "집으로 갈 때 (From)",
+    waitList: "대기 명단", allAssig: "배정 완료", cars: "차량 목록", full: "만차", mapNav: "지도 내비", dropHere: "여기로 드래그", noDriv: "가능한 운전자가 없습니다.",
+    navCal: "일정", navProf: "프로필", navAdmin: "관리자", navGuide: "설명서", guideTitle: "앱 사용 설명서",
     g1T: "1. 앱 설치하기", g1D: "아이폰: Safari 하단 공유 버튼 > '홈 화면에 추가'\n안드로이드: Chrome 우측 상단 메뉴 > '홈 화면에 추가'",
     g2T: "2. 라이드 신청하기", g2D: "일정(Calendar) 탭에서 날짜를 누르고 '1클릭 신청' 버튼을 누르면 신청이 완료됩니다.",
     g3T: "3. 실시간 톡/상태 알림", g3D: "출발 당일 상태 버튼을 누르거나 직접 텍스트를 입력해서 메시지를 전송하면 상대방에게 즉시 표시됩니다.",
-    loading: "로딩 중...",
-    msgPlaceholder: "메시지 직접 입력...", sendBtn: "전송",
-    vehicleType: "운행 차량", personalCar: "개인 자가용", churchVan: "교회 밴 (15인승)", seats: "인승"
+    loading: "로딩 중...", msgPlaceholder: "메시지 직접 입력...", sendBtn: "전송", vehicleType: "운행 차량", personalCar: "개인 자가용", churchVan: "교회 밴 (15인승)", seats: "인승",
+    refresh: "새로고침", statusUpdated: "상태가 전송되었습니다.", msgSent: "메시지가 전송되었습니다.", refreshed: "최신 정보로 새로고침 되었습니다.",
+    assignedTitle: "배차 완료", assignedBody: "차량이 성공적으로 배정되었습니다.", alertTitle: "운전자 알림"
   }
 };
 
 const statusMap: Record<string, {en: string, ko: string}> = {
-  '5 Mins Late': {en: 'Late 5 min', ko: '5분 지각'},
-  'Ready outside': {en: 'Ready outside', ko: '탑승 준비 완료'},
-  'Waiting at church': {en: 'Waiting at church', ko: '교회 대기 중'},
+  'Waiting at pickup area': {en: 'Waiting at pickup area', ko: '탑승 구역 대기 중'},
   'Departed': {en: 'Departed', ko: '출발함'},
-  'Arriving in 3 min': {en: '3 Mins away', ko: '3분 후 도착'},
+  'Arrived': {en: 'Arrived', ko: '도착함'},
 };
 
 export default function Home() {
@@ -138,10 +102,7 @@ export default function Home() {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
 
-  const [formData, setFormData] = useState({
-    name: '', phone: '', address: '',
-    rideType: 'Need a Ride', capacity: '4', isVan: false
-  });
+  const [formData, setFormData] = useState({ name: '', phone: '', address: '', rideType: 'Need a Ride', capacity: '4', isVan: false });
   const [saving, setSaving] = useState(false);
   const [notificationStatus, setNotificationStatus] = useState<string>('');
 
@@ -150,9 +111,7 @@ export default function Home() {
   const [driverDetails, setDriverDetails] = useState<Record<string, Application>>({});
   const [myPassengers, setMyPassengers] = useState<Application[]>([]);
   
-  const [newEvent, setNewEvent] = useState({
-    title: '', date: '', destination: '', type: 'regular'
-  });
+  const [newEvent, setNewEvent] = useState({ title: '', date: '', destination: '', type: 'regular' });
   const [creatingEvent, setCreatingEvent] = useState(false);
 
   const [adminMode, setAdminMode] = useState<'create' | 'assign'>('create');
@@ -162,6 +121,15 @@ export default function Home() {
   const [dragOverCarId, setDragOverCarId] = useState<string | null>(null);
 
   const [customMsg, setCustomMsg] = useState<Record<string, string>>({});
+  const prevAppsRef = useRef<Record<string, Application>>({});
+
+  const showLocalNotification = (title: string, body: string) => {
+    if (Notification.permission === 'granted') {
+      new Notification(title, { body, icon: '/icon.png' });
+    } else {
+      alert(`${title}\n${body}`);
+    }
+  };
 
   useEffect(() => {
     let unsubscribeApps: () => void;
@@ -173,12 +141,27 @@ export default function Home() {
         const appliedMap: Record<string, Application> = {};
         const driverIds = new Set<string>();
 
-        querySnapshot.forEach(docSnap => {
-          const data = docSnap.data() as Application;
-          appliedMap[data.eventId] = { ...data, id: docSnap.id };
+        querySnapshot.docChanges().forEach((change) => {
+          const data = change.doc.data() as Application;
+          const prevData = prevAppsRef.current[change.doc.id];
+          
+          if (change.type === 'modified' && prevData) {
+            // 오직 탑승자(Rider)일 때만 알림 발생 (운전자 방해 금지)
+            if (data.role === 'rider') {
+              if (!prevData.carIdTo && data.carIdTo) {
+                showLocalNotification(t.assignedTitle, t.assignedBody);
+              }
+              if (prevData.statusTo !== data.statusTo && data.statusTo) {
+                showLocalNotification(t.alertTitle, data.statusTo);
+              }
+            }
+          }
+          prevAppsRef.current[change.doc.id] = { ...data, id: change.doc.id };
+          appliedMap[data.eventId] = { ...data, id: change.doc.id };
           if (data.carIdTo) driverIds.add(data.carIdTo);
           if (data.carIdFrom) driverIds.add(data.carIdFrom);
         });
+        
         setUserApplications(appliedMap);
 
         const drivers: Record<string, Application> = {};
@@ -193,6 +176,7 @@ export default function Home() {
       });
 
       const qPassengers = query(collection(db, 'applications'));
+      // 탑승자 목록 업데이트 리스너 (운전자용) - 여기서는 알림을 띄우지 않음
       unsubscribePassengers = onSnapshot(qPassengers, (snapshot) => {
         const passengers: Application[] = [];
         snapshot.forEach(docSnap => {
@@ -212,17 +196,14 @@ export default function Home() {
         await fetchEvents();
         setupRealtime(currentUser.uid);
       } else {
-        setProfile(null);
-        setUserApplications({});
-        setMyPassengers([]);
-        setLoading(false);
+        setProfile(null); setUserApplications({}); setMyPassengers([]); setLoading(false);
         if (unsubscribeApps) unsubscribeApps();
         if (unsubscribePassengers) unsubscribePassengers();
       }
     });
     
     return () => { unsubscribeAuth(); };
-  }, []);
+  }, [lang]);
 
   const requestNotificationPermission = async () => {
     if (!messaging || !user) return;
@@ -233,14 +214,11 @@ export default function Home() {
           vapidKey: 'BJk6feu2WhkttIgPvgw977NbtMd_1RfEfMFqpYECAZgSxeeqSVmGRXnkYDABCXFMWcN9-fEnGUXStxjSX_QOvcU'
         });
         if (token) {
-          const userRef = doc(db, 'users', user.uid);
-          await updateDoc(userRef, { fcmToken: token });
+          await updateDoc(doc(db, 'users', user.uid), { fcmToken: token });
           setNotificationStatus(lang === 'ko' ? '푸시 알림이 설정되었습니다.' : 'Push notifications enabled.');
         }
       }
-    } catch (error) {
-      console.error(error);
-    }
+    } catch (error) { console.error(error); }
   };
 
   const fetchUserProfile = async (uid: string) => {
@@ -254,11 +232,7 @@ export default function Home() {
           rideType: data.rideType || 'Need a Ride', capacity: data.capacity || '4', isVan: data.isVan || false
         });
       }
-    } catch (error) {
-      console.error(error);
-    } finally {
-      setLoading(false);
-    }
+    } catch (error) { console.error(error); } finally { setLoading(false); }
   };
 
   const fetchEvents = async () => {
@@ -282,11 +256,16 @@ export default function Home() {
 
   const handleLogin = () => signInWithPopup(auth, googleProvider);
   const handleLogout = () => { signOut(auth); setProfile(null); setCurrentTab('calendar'); };
+  
+  const handleRefresh = async () => {
+    if (!user) return;
+    await fetchEvents();
+    if (adminSelectedEventId) fetchEventAttendees(adminSelectedEventId);
+    alert(t.refreshed);
+  };
 
   const handleSaveProfile = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!user) return;
-    setSaving(true);
+    e.preventDefault(); if (!user) return; setSaving(true);
     try {
       const newProfile = { ...formData, isAdmin: profile?.isAdmin || false, fcmToken: profile?.fcmToken || '' };
       await setDoc(doc(db, 'users', user.uid), newProfile);
@@ -295,8 +274,7 @@ export default function Home() {
   };
 
   const handleCreateEvent = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setCreatingEvent(true);
+    e.preventDefault(); setCreatingEvent(true);
     try {
       await addDoc(collection(db, 'events'), newEvent);
       setNewEvent({ title: '', date: '', destination: '', type: 'regular' });
@@ -307,8 +285,7 @@ export default function Home() {
   const handleApply = async (event: ChurchEvent) => {
     if (!user || !profile) return;
     try {
-      const appId = `${event.id}_${user.uid}`;
-      await setDoc(doc(db, 'applications', appId), {
+      await setDoc(doc(db, 'applications', `${event.id}_${user.uid}`), {
         eventId: event.id, userId: user.uid, name: profile.name, phone: profile.phone, address: profile.address,
         rideType: profile.rideType, capacity: profile.capacity, role: profile.rideType.includes('Drive') ? 'driver' : 'rider',
         carIdTo: null, carIdFrom: null, statusTo: '', statusFrom: '', isVan: profile.isVan || false, appliedAt: serverTimestamp()
@@ -320,23 +297,22 @@ export default function Home() {
     if (user) await deleteDoc(doc(db, 'applications', `${eventId}_${user.uid}`));
   };
 
-  const updateStatus = async (appId: string, direction: 'to' | 'from', statusMsg: string) => {
+  const updateStatus = async (appId: string, direction: 'to' | 'from', statusMsg: string, isCustomMsg = false) => {
     try {
       await updateDoc(doc(db, 'applications', appId), { [direction === 'to' ? 'statusTo' : 'statusFrom']: statusMsg });
+      alert(isCustomMsg ? t.msgSent : t.statusUpdated);
     } catch (error) { console.error(error); }
   };
 
   const updateVehicle = async (appId: string, isVan: boolean, capacity: string) => {
-    try {
-      await updateDoc(doc(db, 'applications', appId), { isVan, capacity });
-    } catch (error) { console.error(error); }
+    try { await updateDoc(doc(db, 'applications', appId), { isVan, capacity }); } catch (error) { console.error(error); }
   };
 
   const handleSendCustomMsg = (appId: string, direction: 'to' | 'from') => {
     const key = `${appId}_${direction}`;
     const msg = customMsg[key];
     if (msg && msg.trim() !== '') {
-      updateStatus(appId, direction, msg);
+      updateStatus(appId, direction, msg, true);
       setCustomMsg(prev => ({ ...prev, [key]: '' }));
     }
   };
@@ -378,9 +354,14 @@ export default function Home() {
     <div style={{ width: '100%', maxWidth: '480px', margin: '0 auto', background: '#f4f4f5', minHeight: '100vh', paddingBottom: '80px', fontFamily: 'sans-serif' }}>
       <header style={{ background: '#ffffff', padding: '15px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid #e4e4e7' }}>
         <h1 style={{ margin: 0, fontSize: '18px', color: '#18181b', fontWeight: 'bold' }}>{t.appTitle}</h1>
-        <button onClick={() => setLang(lang === 'ko' ? 'en' : 'ko')} style={{ padding: '6px 12px', background: '#e4e4e7', borderRadius: '20px', fontSize: '12px', fontWeight: 'bold' }}>
-          {lang === 'ko' ? 'EN / KR' : 'KR / EN'}
-        </button>
+        <div style={{ display: 'flex', gap: '8px' }}>
+          <button onClick={handleRefresh} style={{ padding: '6px 10px', background: '#e4e4e7', borderRadius: '20px', border: 'none', fontSize: '12px', fontWeight: 'bold', cursor: 'pointer' }}>
+            ↻ {t.refresh}
+          </button>
+          <button onClick={() => setLang(lang === 'ko' ? 'en' : 'ko')} style={{ padding: '6px 10px', background: '#e4e4e7', borderRadius: '20px', border: 'none', fontSize: '12px', fontWeight: 'bold', cursor: 'pointer' }}>
+            {lang === 'ko' ? 'EN' : 'KR'}
+          </button>
+        </div>
       </header>
 
       <main style={{ padding: '20px' }}>
@@ -475,7 +456,7 @@ export default function Home() {
                               
                               <div style={{ display: 'flex', gap: '5px', marginTop: '10px' }}>
                                 <button onClick={() => updateStatus(userApp.id, 'to', 'Departed')} style={{ flex: 1, padding: '8px', background: '#f1f5f9', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '12px', fontWeight: 'bold' }}>{t.departed}</button>
-                                <button onClick={() => updateStatus(userApp.id, 'to', 'Arriving in 3 min')} style={{ flex: 1, padding: '8px', background: '#f1f5f9', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '12px', fontWeight: 'bold' }}>{t.arr3}</button>
+                                <button onClick={() => updateStatus(userApp.id, 'to', 'Arrived')} style={{ flex: 1, padding: '8px', background: '#f1f5f9', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '12px', fontWeight: 'bold' }}>{t.arrived}</button>
                               </div>
                               <div style={{ display: 'flex', gap: '5px', marginTop: '5px' }}>
                                 <input type="text" placeholder={t.msgPlaceholder} value={customMsg[`${userApp.id}_to`] || ''} onChange={e => setCustomMsg({...customMsg, [`${userApp.id}_to`]: e.target.value})} style={{ flex: 1, padding: '8px', borderRadius: '6px', border: '1px solid #ccc', fontSize: '13px' }} />
@@ -491,9 +472,9 @@ export default function Home() {
                                 <div style={{ marginBottom: '15px' }}>
                                   <span style={{ fontSize: '12px', fontWeight: 'bold', color: '#64748b' }}>{t.toEvt} ({t.driverTxt}: {driverDetails[userApp.carIdTo]?.name || '...'})</span>
                                   {driverDetails[userApp.carIdTo]?.statusTo && <div style={{ background: '#fee2e2', color: '#b91c1c', padding: '6px 10px', borderRadius: '6px', fontSize: '12px', fontWeight: 'bold', margin: '5px 0' }}>{t.statusTxt}: {displayStatus(driverDetails[userApp.carIdTo].statusTo)}</div>}
+                                  
                                   <div style={{ display: 'flex', gap: '5px', marginTop: '5px' }}>
-                                    <button onClick={() => updateStatus(userApp.id, 'to', '5 Mins Late')} style={{ flex: 1, padding: '8px', background: '#f1f5f9', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '12px', fontWeight: 'bold' }}>{t.late5}</button>
-                                    <button onClick={() => updateStatus(userApp.id, 'to', 'Ready outside')} style={{ flex: 1, padding: '8px', background: '#f1f5f9', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '12px', fontWeight: 'bold' }}>{t.ready}</button>
+                                    <button onClick={() => updateStatus(userApp.id, 'to', 'Waiting at pickup area')} style={{ flex: 1, padding: '8px', background: '#f1f5f9', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '12px', fontWeight: 'bold' }}>{t.waitPickup}</button>
                                   </div>
                                   <div style={{ display: 'flex', gap: '5px', marginTop: '5px' }}>
                                     <input type="text" placeholder={t.msgPlaceholder} value={customMsg[`${userApp.id}_to`] || ''} onChange={e => setCustomMsg({...customMsg, [`${userApp.id}_to`]: e.target.value})} style={{ flex: 1, padding: '8px', borderRadius: '6px', border: '1px solid #ccc', fontSize: '13px' }} />
