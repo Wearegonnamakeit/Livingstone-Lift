@@ -70,7 +70,7 @@ const text = {
     needRide: "라이드 필요", canDrive: "운전 가능", driveSelf: "개별 이동", van: "상황에 따라 교회 밴도 운전합니다", save: "프로필 저장", saving: "저장 중...",
     myProfile: "내 프로필", signOut: "로그아웃", prev: "이전", next: "다음", scheduleTitle: "선택된 날짜의 일정",
     regular: "정기 예배", special: "특별 행사", myAssignment: "내 탑승 정보", driverTxt: "운전자", statusTxt: "운전자 상태",
-    waitPickup: "탑승 구역 대기 중", myPassengers: "내 탑승자 목록", call: "전화", noPass: "아직 배정된 탑승자가 없습니다.",
+    waitPickup: "탑승 구역 대기 중", myPassengers: "내 탑승자 목록", call: "전화", noPass: "아직 배정된 정보가 없습니다.",
     departed: "출발함", arrived: "도착함", applyBtn: "1클릭 신청", appliedBtn: "신청 완료", cancelBtn: "신청 취소", noEvent: "이 날짜에 등록된 일정이 없습니다.",
     adminNew: "새 일정", adminAssign: "인원 배정", adminUsers: "교인 명단", titleL: "일정 이름", dateL: "날짜", destL: "목적지", typeL: "일정 종류",
     createBtn: "일정 생성", creatingBtn: "생성 중...", selectEvt: "-- 관리할 일정 선택 --", toEvt: "교회로 갈 때 (To)", fromEvt: "집으로 갈 때 (From)",
@@ -106,7 +106,6 @@ export default function Home() {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [profile, setProfile] = useState<UserProfile | null>(null);
   
-  // 탭 상태 개편 (profile, guide, create, assign, users를 모두 1차원 구조로 평탄화)
   const [currentTab, setCurrentTab] = useState<'calendar' | 'profile' | 'guide' | 'create' | 'assign' | 'users'>('calendar');
   
   const [currentDate, setCurrentDate] = useState(new Date());
@@ -123,6 +122,7 @@ export default function Home() {
   const [newEvent, setNewEvent] = useState({ title: '', date: '', destination: '', type: 'regular' });
   const [creatingEvent, setCreatingEvent] = useState(false);
 
+  const [adminMode, setAdminMode] = useState<'create' | 'assign' | 'users'>('create');
   const [adminSelectedEventId, setAdminSelectedEventId] = useState<string>('');
   const [eventAttendees, setEventAttendees] = useState<Application[]>([]);
   const [allUsersList, setAllUsersList] = useState<(UserProfile & {id: string})[]>([]);
@@ -153,6 +153,7 @@ export default function Home() {
 
     const setupRealtime = (uid: string) => {
       const q = query(collection(db, 'applications'));
+      
       unsubscribeAll = onSnapshot(q, (snapshot) => {
         const appliedMap: Record<string, Application> = {};
         const driversMap: Record<string, Application> = {};
@@ -160,6 +161,7 @@ export default function Home() {
         
         snapshot.forEach((docSnap) => {
           const data = { ...docSnap.data(), id: docSnap.id } as Application;
+          
           if (data.userId === uid) appliedMap[data.eventId] = data;
           if (data.role === 'driver') driversMap[data.id] = data;
           if (data.carIdTo?.endsWith(uid) || data.carIdFrom?.endsWith(uid)) passengersArr.push(data);
@@ -170,13 +172,22 @@ export default function Home() {
           const prevData = prevAppsRef.current[data.id];
           
           if (change.type === 'modified' && prevData) {
-            if (data.userId === uid && data.role === 'rider' && !prevData.carIdTo && data.carIdTo) {
-              showLocalNotification(t.assignedTitle, t.assignedBody);
+            // 탑승자: To나 From 둘 중 하나라도 새로 배정되면 알림
+            if (data.userId === uid && data.role === 'rider') {
+              if ((!prevData.carIdTo && data.carIdTo) || (!prevData.carIdFrom && data.carIdFrom)) {
+                showLocalNotification(t.assignedTitle, t.assignedBody);
+              }
             }
+            // 탑승자: 담당 운전자의 상태 변경 알림 (양방향 모두 감지)
             if (data.role === 'driver') {
               const myApp = appliedMap[data.eventId];
-              if (myApp && myApp.carIdTo === data.id && prevData.statusTo !== data.statusTo && data.statusTo) {
-                showLocalNotification(t.alertTitle, data.statusTo);
+              if (myApp) {
+                if (myApp.carIdTo === data.id && prevData.statusTo !== data.statusTo && data.statusTo) {
+                  showLocalNotification(t.alertTitle, data.statusTo);
+                }
+                if (myApp.carIdFrom === data.id && prevData.statusFrom !== data.statusFrom && data.statusFrom) {
+                  showLocalNotification(t.alertTitle, data.statusFrom);
+                }
               }
             }
           }
@@ -431,7 +442,6 @@ export default function Home() {
       <header style={{ background: '#ffffff', padding: '15px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid #e4e4e7' }}>
         <h1 style={{ margin: 0, fontSize: '18px', color: '#18181b', fontWeight: 'bold' }}>{t.appTitle}</h1>
         <div style={{ display: 'flex', gap: '5px' }}>
-          {/* 상단으로 올라온 프로필 & 설명서 버튼 */}
           {user && profile && (
             <>
               <button onClick={() => setCurrentTab('profile')} style={{ padding: '6px 8px', background: '#e4e4e7', borderRadius: '6px', border: 'none', fontSize: '11px', fontWeight: 'bold', cursor: 'pointer' }}>{t.navProf}</button>
@@ -493,12 +503,10 @@ export default function Home() {
                 
                 <div style={{ background: '#fff', padding: '20px', borderRadius: '16px' }}>
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '5px' }}>
-                    {/* 요일 헤더 (일요일 빨강, 토요일 파랑) */}
                     {weekDays.map((wd, index) => (
                       <div key={wd} style={{ textAlign: 'center', fontSize: '12px', fontWeight: 'bold', color: index === 0 ? '#ef4444' : index === 6 ? '#3b82f6' : '#64748b', marginBottom: '10px' }}>{wd}</div>
                     ))}
                     {blanks.map(b => <div key={`blank-${b}`} />)}
-                    {/* 날짜 숫자 (일요일 빨강, 토요일 파랑) */}
                     {days.map(day => {
                       const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
                       const hasEvent = events.some(e => e.date === dateStr);
@@ -525,6 +533,7 @@ export default function Home() {
                           <span style={{ fontSize: '12px', background: event.type === 'regular' ? '#dbeafe' : '#fce7f3', color: event.type === 'regular' ? '#1d4ed8' : '#be185d', padding: '5px 10px', borderRadius: '12px', fontWeight: 'bold' }}>{event.type === 'regular' ? t.regular : t.special}</span>
                           <h4 style={{ margin: '12px 0', fontSize: '18px' }}>{event.title}</h4>
                           
+                          {/* 운전자 양방향 화면 */}
                           {userApp?.role === 'driver' && (
                             <div style={{ marginBottom: '15px', background: '#f8fafc', padding: '15px', borderRadius: '8px' }}>
                               <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '15px' }}>
@@ -538,30 +547,61 @@ export default function Home() {
                                   <option value="van">{t.churchVan}</option>
                                 </select>
                               </div>
-                              <h5 style={{ margin: '0 0 10px 0', fontSize: '14px' }}>{t.myPassengers}</h5>
-                              {myPassengers.filter(p => p.eventId === event.id).map(p => (
-                                <div key={p.id} style={{ display: 'flex', justifyContent: 'space-between', padding: '8px', background: '#fff', borderRadius: '6px', marginBottom: '5px', border: '1px solid #e2e8f0' }}>
-                                  <div><span style={{ fontSize: '13px', fontWeight: 'bold' }}>{p.name}</span> {p.statusTo && p.carIdTo?.endsWith(user.uid) && <span style={{ fontSize: '11px', color: '#ef4444', fontWeight: 'bold', marginLeft: '5px' }}>({displayStatus(p.statusTo)})</span>}</div>
-                                  <a href={`tel:${p.phone}`} style={{ fontSize: '12px', color: '#2563eb', fontWeight: 'bold', textDecoration: 'none' }}>{t.call}</a>
+                              
+                              {/* 갈 때 (To) */}
+                              <div style={{ marginBottom: '15px', paddingBottom: '15px', borderBottom: '1px dashed #cbd5e1' }}>
+                                <h5 style={{ margin: '0 0 10px 0', fontSize: '14px', color: '#2563eb' }}>{t.toEvt}</h5>
+                                {myPassengers.filter(p => p.eventId === event.id && p.carIdTo === userApp.id).map(p => (
+                                  <div key={p.id} style={{ display: 'flex', justifyContent: 'space-between', padding: '8px', background: '#fff', borderRadius: '6px', marginBottom: '5px', border: '1px solid #e2e8f0' }}>
+                                    <div><span style={{ fontSize: '13px', fontWeight: 'bold' }}>{p.name}</span> {p.statusTo && <span style={{ fontSize: '11px', color: '#ef4444', fontWeight: 'bold', marginLeft: '5px' }}>({displayStatus(p.statusTo)})</span>}</div>
+                                    <a href={`tel:${p.phone}`} style={{ fontSize: '12px', color: '#2563eb', fontWeight: 'bold', textDecoration: 'none' }}>{t.call}</a>
+                                  </div>
+                                ))}
+                                {myPassengers.filter(p => p.eventId === event.id && p.carIdTo === userApp.id).length === 0 && <p style={{ fontSize: '13px', color: '#94a3b8', margin: 0 }}>{t.noPass}</p>}
+                                <div style={{ display: 'flex', gap: '5px', marginTop: '10px' }}>
+                                  <button onClick={() => updateStatus(userApp, 'to', 'Departed')} style={{ flex: 1, padding: '8px', background: '#f1f5f9', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '12px', fontWeight: 'bold', cursor: 'pointer' }}>{t.departed}</button>
+                                  <button onClick={() => updateStatus(userApp, 'to', 'Arrived')} style={{ flex: 1, padding: '8px', background: '#f1f5f9', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '12px', fontWeight: 'bold', cursor: 'pointer' }}>{t.arrived}</button>
                                 </div>
-                              ))}
-                              <div style={{ display: 'flex', gap: '5px', marginTop: '10px' }}>
-                                <button onClick={() => updateStatus(userApp, 'to', 'Departed')} style={{ flex: 1, padding: '8px', background: '#f1f5f9', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '12px', fontWeight: 'bold', cursor: 'pointer' }}>{t.departed}</button>
-                                <button onClick={() => updateStatus(userApp, 'to', 'Arrived')} style={{ flex: 1, padding: '8px', background: '#f1f5f9', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '12px', fontWeight: 'bold', cursor: 'pointer' }}>{t.arrived}</button>
+                                <div style={{ display: 'flex', gap: '5px', marginTop: '5px' }}>
+                                  <input type="text" placeholder={t.msgPlaceholder} value={customMsg[`${userApp.id}_to`] || ''} onChange={e => setCustomMsg({...customMsg, [`${userApp.id}_to`]: e.target.value})} style={{ flex: 1, padding: '8px', borderRadius: '6px', border: '1px solid #ccc', fontSize: '13px' }} />
+                                  <button onClick={() => handleSendCustomMsg(userApp, 'to')} style={{ padding: '8px 15px', background: '#18181b', color: '#fff', border: 'none', borderRadius: '6px', fontWeight: 'bold', cursor: 'pointer' }}>{t.sendBtn}</button>
+                                </div>
                               </div>
-                              <div style={{ display: 'flex', gap: '5px', marginTop: '5px' }}>
-                                <input type="text" placeholder={t.msgPlaceholder} value={customMsg[`${userApp.id}_to`] || ''} onChange={e => setCustomMsg({...customMsg, [`${userApp.id}_to`]: e.target.value})} style={{ flex: 1, padding: '8px', borderRadius: '6px', border: '1px solid #ccc', fontSize: '13px' }} />
-                                <button onClick={() => handleSendCustomMsg(userApp, 'to')} style={{ padding: '8px 15px', background: '#18181b', color: '#fff', border: 'none', borderRadius: '6px', fontWeight: 'bold', cursor: 'pointer' }}>{t.sendBtn}</button>
+
+                              {/* 올 때 (From) */}
+                              <div>
+                                <h5 style={{ margin: '0 0 10px 0', fontSize: '14px', color: '#059669' }}>{t.fromEvt}</h5>
+                                {myPassengers.filter(p => p.eventId === event.id && p.carIdFrom === userApp.id).map(p => (
+                                  <div key={p.id} style={{ display: 'flex', justifyContent: 'space-between', padding: '8px', background: '#fff', borderRadius: '6px', marginBottom: '5px', border: '1px solid #e2e8f0' }}>
+                                    <div><span style={{ fontSize: '13px', fontWeight: 'bold' }}>{p.name}</span> {p.statusFrom && <span style={{ fontSize: '11px', color: '#ef4444', fontWeight: 'bold', marginLeft: '5px' }}>({displayStatus(p.statusFrom)})</span>}</div>
+                                    <a href={`tel:${p.phone}`} style={{ fontSize: '12px', color: '#2563eb', fontWeight: 'bold', textDecoration: 'none' }}>{t.call}</a>
+                                  </div>
+                                ))}
+                                {myPassengers.filter(p => p.eventId === event.id && p.carIdFrom === userApp.id).length === 0 && <p style={{ fontSize: '13px', color: '#94a3b8', margin: 0 }}>{t.noPass}</p>}
+                                <div style={{ display: 'flex', gap: '5px', marginTop: '10px' }}>
+                                  <button onClick={() => updateStatus(userApp, 'from', 'Departed')} style={{ flex: 1, padding: '8px', background: '#f1f5f9', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '12px', fontWeight: 'bold', cursor: 'pointer' }}>{t.departed}</button>
+                                  <button onClick={() => updateStatus(userApp, 'from', 'Arrived')} style={{ flex: 1, padding: '8px', background: '#f1f5f9', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '12px', fontWeight: 'bold', cursor: 'pointer' }}>{t.arrived}</button>
+                                </div>
+                                <div style={{ display: 'flex', gap: '5px', marginTop: '5px' }}>
+                                  <input type="text" placeholder={t.msgPlaceholder} value={customMsg[`${userApp.id}_from`] || ''} onChange={e => setCustomMsg({...customMsg, [`${userApp.id}_from`]: e.target.value})} style={{ flex: 1, padding: '8px', borderRadius: '6px', border: '1px solid #ccc', fontSize: '13px' }} />
+                                  <button onClick={() => handleSendCustomMsg(userApp, 'from')} style={{ padding: '8px 15px', background: '#18181b', color: '#fff', border: 'none', borderRadius: '6px', fontWeight: 'bold', cursor: 'pointer' }}>{t.sendBtn}</button>
+                                </div>
                               </div>
                             </div>
                           )}
 
+                          {/* 탑승자 양방향 화면 */}
                           {userApp?.role === 'rider' && (
                             <div style={{ background: '#f8fafc', padding: '15px', borderRadius: '8px', marginBottom: '15px' }}>
                               <h5 style={{ margin: '0 0 10px 0', fontSize: '14px' }}>{t.myAssignment}</h5>
+                              
+                              {!userApp.carIdTo && !userApp.carIdFrom && (
+                                <p style={{ fontSize: '13px', color: '#64748b', margin: 0 }}>{t.noPass}</p>
+                              )}
+
                               {userApp.carIdTo && (
-                                <div style={{ marginBottom: '15px' }}>
-                                  <span style={{ fontSize: '12px', fontWeight: 'bold', color: '#64748b' }}>{t.toEvt} ({t.driverTxt}: {driverDetails[userApp.carIdTo]?.name || '...'})</span>
+                                <div style={{ marginBottom: userApp.carIdFrom ? '15px' : '0', paddingBottom: userApp.carIdFrom ? '15px' : '0', borderBottom: userApp.carIdFrom ? '1px dashed #cbd5e1' : 'none' }}>
+                                  <span style={{ fontSize: '12px', fontWeight: 'bold', color: '#2563eb' }}>{t.toEvt} ({t.driverTxt}: {driverDetails[userApp.carIdTo]?.name || '...'})</span>
                                   {driverDetails[userApp.carIdTo]?.statusTo && <div style={{ background: '#fee2e2', color: '#b91c1c', padding: '6px 10px', borderRadius: '6px', fontSize: '12px', fontWeight: 'bold', margin: '5px 0' }}>{t.statusTxt}: {displayStatus(driverDetails[userApp.carIdTo].statusTo)}</div>}
                                   
                                   <div style={{ display: 'flex', gap: '5px', marginTop: '5px' }}>
@@ -570,6 +610,21 @@ export default function Home() {
                                   <div style={{ display: 'flex', gap: '5px', marginTop: '5px' }}>
                                     <input type="text" placeholder={t.msgPlaceholder} value={customMsg[`${userApp.id}_to`] || ''} onChange={e => setCustomMsg({...customMsg, [`${userApp.id}_to`]: e.target.value})} style={{ flex: 1, padding: '8px', borderRadius: '6px', border: '1px solid #ccc', fontSize: '13px' }} />
                                     <button onClick={() => handleSendCustomMsg(userApp, 'to')} style={{ padding: '8px 15px', background: '#18181b', color: '#fff', border: 'none', borderRadius: '6px', fontWeight: 'bold', cursor: 'pointer' }}>{t.sendBtn}</button>
+                                  </div>
+                                </div>
+                              )}
+
+                              {userApp.carIdFrom && (
+                                <div>
+                                  <span style={{ fontSize: '12px', fontWeight: 'bold', color: '#059669' }}>{t.fromEvt} ({t.driverTxt}: {driverDetails[userApp.carIdFrom]?.name || '...'})</span>
+                                  {driverDetails[userApp.carIdFrom]?.statusFrom && <div style={{ background: '#fee2e2', color: '#b91c1c', padding: '6px 10px', borderRadius: '6px', fontSize: '12px', fontWeight: 'bold', margin: '5px 0' }}>{t.statusTxt}: {displayStatus(driverDetails[userApp.carIdFrom].statusFrom)}</div>}
+                                  
+                                  <div style={{ display: 'flex', gap: '5px', marginTop: '5px' }}>
+                                    <button onClick={() => updateStatus(userApp, 'from', 'Waiting at pickup area')} style={{ flex: 1, padding: '8px', background: '#f1f5f9', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '12px', fontWeight: 'bold', cursor: 'pointer' }}>{t.waitPickup}</button>
+                                  </div>
+                                  <div style={{ display: 'flex', gap: '5px', marginTop: '5px' }}>
+                                    <input type="text" placeholder={t.msgPlaceholder} value={customMsg[`${userApp.id}_from`] || ''} onChange={e => setCustomMsg({...customMsg, [`${userApp.id}_from`]: e.target.value})} style={{ flex: 1, padding: '8px', borderRadius: '6px', border: '1px solid #ccc', fontSize: '13px' }} />
+                                    <button onClick={() => handleSendCustomMsg(userApp, 'from')} style={{ padding: '8px 15px', background: '#18181b', color: '#fff', border: 'none', borderRadius: '6px', fontWeight: 'bold', cursor: 'pointer' }}>{t.sendBtn}</button>
                                   </div>
                                 </div>
                               )}
@@ -705,7 +760,7 @@ export default function Home() {
               </div>
             )}
 
-            {/* -------------------- PROFILE TAB (헤더 이동) -------------------- */}
+            {/* -------------------- PROFILE TAB -------------------- */}
             {currentTab === 'profile' && (
               <div style={{ background: '#ffffff', padding: '25px', borderRadius: '12px' }}>
                 <h2 style={{ margin: '0 0 20px 0', fontSize: '18px' }}>{t.myProfile}</h2>
@@ -732,7 +787,7 @@ export default function Home() {
               </div>
             )}
             
-            {/* -------------------- GUIDE TAB (헤더 이동) -------------------- */}
+            {/* -------------------- GUIDE TAB -------------------- */}
             {currentTab === 'guide' && (
               <div style={{ background: '#ffffff', padding: '25px', borderRadius: '12px', border: '1px solid #e4e4e7' }}>
                 <h2 style={{ margin: '0 0 20px 0', fontSize: '18px' }}>{t.guideTitle}</h2>
@@ -754,7 +809,7 @@ export default function Home() {
         )}
       </main>
 
-      {/* -------------------- BOTTOM NAVIGATION (핵심 기능 노출) -------------------- */}
+      {/* -------------------- BOTTOM NAVIGATION -------------------- */}
       {user && profile && (
         <nav style={{ position: 'fixed', bottom: 0, left: '50%', transform: 'translateX(-50%)', width: '100%', maxWidth: '480px', background: '#ffffff', display: 'flex', borderTop: '1px solid #e4e4e7' }}>
           <button onClick={() => setCurrentTab('calendar')} style={{ flex: 1, padding: '15px 0', background: 'none', border: 'none', color: currentTab === 'calendar' ? '#18181b' : '#a1a1aa', fontWeight: currentTab === 'calendar' ? 'bold' : 'normal', fontSize: '13px', cursor: 'pointer' }}>{t.navCal}</button>
