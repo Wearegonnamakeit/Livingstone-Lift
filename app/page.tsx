@@ -50,17 +50,17 @@ const text = {
     regular: "Regular Worship", special: "Special Event", myAssignment: "My Assignment", driverTxt: "Driver", statusTxt: "Driver Status",
     waitPickup: "Waiting at pickup area", myPassengers: "My Passengers", call: "Call", noPass: "No passengers assigned yet.",
     departed: "Departed", arrived: "Arrived", applyBtn: "1-Click Apply", appliedBtn: "Applied", cancelBtn: "Cancel", noEvent: "No events registered for this date.",
-    adminNew: "New Event", adminAssign: "Assignments", adminUsers: "User Roster", titleL: "Title", dateL: "Date", destL: "Destination", typeL: "Event Type",
+    adminNew: "New Event", adminAssign: "Assign", adminUsers: "Roster", titleL: "Title", dateL: "Date", destL: "Destination", typeL: "Event Type",
     createBtn: "Create Event", creatingBtn: "Creating...", selectEvt: "-- Select Event to Manage --", toEvt: "To Event", fromEvt: "From Event",
     waitList: "Waiting List", allAssig: "All assigned", cars: "Cars", full: "FULL", mapNav: "Map Navi", dropHere: "Drop here", noDriv: "No drivers available.",
-    navCal: "Calendar", navProf: "Profile", navAdmin: "Manage", navGuide: "Guide", guideTitle: "User Guide",
+    navCal: "Calendar", navProf: "Prof", navGuide: "Guide", guideTitle: "User Guide",
     g1T: "1. Install the App", g1D: "iOS: Safari Share Button > 'Add to Home Screen'\nAndroid: Chrome Menu > 'Add to Home screen'",
     g2T: "2. Ride Application", g2D: "Go to Calendar, select a date, and click '1-Click Apply'.",
     g3T: "3. Status Update", g3D: "Use the status buttons or type a custom message to notify your driver/passengers in real-time.",
     loading: "Loading...", msgPlaceholder: "Type message...", sendBtn: "Send", vehicleType: "Vehicle", personalCar: "Personal Car", churchVan: "Church Van (15 seats)", seats: "seats",
     refresh: "Refresh", statusUpdated: "Status updated.", msgSent: "Message sent.", refreshed: "Data refreshed successfully.",
     assignedTitle: "Ride Assigned", assignedBody: "A driver has been assigned to you.", alertTitle: "Driver Update", newMsg: "New Message",
-    pushEnabled: "Push Notifications ON", pushDisabled: "Enable Push Notifications", disablePushConfirm: "Do you want to disable push notifications?",
+    pushEnabled: "[ON] Push Notifications (Disable)", pushDisabled: "Enable Push Notifications", disablePushConfirm: "Do you want to disable push notifications?",
     deleteEvt: "Delete Event", confirmDeleteEvt: "Are you sure you want to delete this event? All ride applications will be removed.",
     statsTxt: "Total Riders", statsSeats: "Total Seats", statsAvail: "Seats Available", statsShort: "Seat Shortage"
   },
@@ -75,14 +75,14 @@ const text = {
     adminNew: "새 일정", adminAssign: "인원 배정", adminUsers: "교인 명단", titleL: "일정 이름", dateL: "날짜", destL: "목적지", typeL: "일정 종류",
     createBtn: "일정 생성", creatingBtn: "생성 중...", selectEvt: "-- 관리할 일정 선택 --", toEvt: "교회로 갈 때 (To)", fromEvt: "집으로 갈 때 (From)",
     waitList: "대기 명단", allAssig: "배정 완료", cars: "차량 목록", full: "만차", mapNav: "지도 내비", dropHere: "여기로 드래그", noDriv: "가능한 운전자가 없습니다.",
-    navCal: "일정", navProf: "프로필", navAdmin: "관리", navGuide: "설명서", guideTitle: "앱 사용 설명서",
+    navCal: "일정", navProf: "프로필", navGuide: "설명서", guideTitle: "앱 사용 설명서",
     g1T: "1. 앱 설치하기", g1D: "아이폰: Safari 하단 공유 버튼 > '홈 화면에 추가'\n안드로이드: Chrome 우측 상단 메뉴 > '홈 화면에 추가'",
     g2T: "2. 라이드 신청하기", g2D: "일정(Calendar) 탭에서 날짜를 누르고 '1클릭 신청' 버튼을 누르면 신청이 완료됩니다.",
     g3T: "3. 실시간 톡/상태 알림", g3D: "출발 당일 상태 버튼을 누르거나 직접 텍스트를 입력해서 메시지를 전송하면 상대방에게 즉시 표시됩니다.",
     loading: "로딩 중...", msgPlaceholder: "메시지 직접 입력...", sendBtn: "전송", vehicleType: "운행 차량", personalCar: "개인 자가용", churchVan: "교회 밴 (15인승)", seats: "인승",
     refresh: "새로고침", statusUpdated: "상태가 전송되었습니다.", msgSent: "메시지가 전송되었습니다.", refreshed: "최신 정보로 새로고침 되었습니다.",
     assignedTitle: "배차 완료", assignedBody: "차량이 성공적으로 배정되었습니다.", alertTitle: "운전자 상태 업데이트", newMsg: "새 메시지",
-    pushEnabled: "✅ 푸시 알림 켜짐 (끄기)", pushDisabled: "푸시 알림 켜기", disablePushConfirm: "푸시 알림을 끄시겠습니까?",
+    pushEnabled: "[ON] 푸시 알림 켜짐 (끄기)", pushDisabled: "푸시 알림 켜기", disablePushConfirm: "푸시 알림을 끄시겠습니까?",
     deleteEvt: "일정 삭제", confirmDeleteEvt: "정말로 이 일정을 삭제하시겠습니까? 신청 내역도 모두 삭제됩니다.",
     statsTxt: "신청 인원", statsSeats: "전체 좌석", statsAvail: "남은 자리", statsShort: "자리 부족"
   }
@@ -105,7 +105,9 @@ export default function Home() {
   const [loading, setLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [profile, setProfile] = useState<UserProfile | null>(null);
-  const [currentTab, setCurrentTab] = useState<'calendar' | 'profile' | 'admin' | 'guide'>('calendar');
+  
+  // 탭 상태 개편 (profile, guide, create, assign, users를 모두 1차원 구조로 평탄화)
+  const [currentTab, setCurrentTab] = useState<'calendar' | 'profile' | 'guide' | 'create' | 'assign' | 'users'>('calendar');
   
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
@@ -121,7 +123,6 @@ export default function Home() {
   const [newEvent, setNewEvent] = useState({ title: '', date: '', destination: '', type: 'regular' });
   const [creatingEvent, setCreatingEvent] = useState(false);
 
-  const [adminMode, setAdminMode] = useState<'create' | 'assign' | 'users'>('create');
   const [adminSelectedEventId, setAdminSelectedEventId] = useState<string>('');
   const [eventAttendees, setEventAttendees] = useState<Application[]>([]);
   const [allUsersList, setAllUsersList] = useState<(UserProfile & {id: string})[]>([]);
@@ -131,7 +132,6 @@ export default function Home() {
   const [customMsg, setCustomMsg] = useState<Record<string, string>>({});
   const prevAppsRef = useRef<Record<string, Application>>({});
 
-  // 운전자이거나 관리자일 경우 관리 탭 접근 가능
   const canManage = profile?.isAdmin || profile?.rideType === 'Can Drive';
 
   useEffect(() => {
@@ -153,7 +153,6 @@ export default function Home() {
 
     const setupRealtime = (uid: string) => {
       const q = query(collection(db, 'applications'));
-      
       unsubscribeAll = onSnapshot(q, (snapshot) => {
         const appliedMap: Record<string, Application> = {};
         const driversMap: Record<string, Application> = {};
@@ -161,7 +160,6 @@ export default function Home() {
         
         snapshot.forEach((docSnap) => {
           const data = { ...docSnap.data(), id: docSnap.id } as Application;
-          
           if (data.userId === uid) appliedMap[data.eventId] = data;
           if (data.role === 'driver') driversMap[data.id] = data;
           if (data.carIdTo?.endsWith(uid) || data.carIdFrom?.endsWith(uid)) passengersArr.push(data);
@@ -286,7 +284,7 @@ export default function Home() {
     return () => { if (unsubAdmin) unsubAdmin(); };
   }, [adminSelectedEventId]);
 
-  useEffect(() => { if (adminMode === 'users') fetchAllUsers(); }, [adminMode]);
+  useEffect(() => { if (currentTab === 'users') fetchAllUsers(); }, [currentTab]);
 
   const handleLogin = () => signInWithPopup(auth, googleProvider);
   const handleLogout = () => { signOut(auth); setProfile(null); setCurrentTab('calendar'); };
@@ -298,6 +296,7 @@ export default function Home() {
       const newProfile = { ...formData, isAdmin: profile?.isAdmin || false, fcmToken: profile?.fcmToken || '' };
       await setDoc(doc(db, 'users', user.uid), newProfile);
       setProfile(newProfile as UserProfile);
+      setCurrentTab('calendar');
     } finally { setSaving(false); }
   };
 
@@ -307,19 +306,17 @@ export default function Home() {
       await addDoc(collection(db, 'events'), newEvent);
       setNewEvent({ title: '', date: '', destination: '', type: 'regular' });
       await fetchEvents();
+      setCurrentTab('calendar');
     } finally { setCreatingEvent(false); }
   };
 
-  // 일정 삭제 함수 추가
   const handleDeleteEvent = async (eventId: string) => {
     if (confirm(t.confirmDeleteEvt)) {
       try {
         await deleteDoc(doc(db, 'events', eventId));
-        // 연관된 신청서 모두 삭제
         const appQ = query(collection(db, 'applications'), where('eventId', '==', eventId));
         const appSnap = await getDocs(appQ);
         appSnap.forEach(d => deleteDoc(d.ref));
-        
         setAdminSelectedEventId('');
         await fetchEvents();
       } catch (error) { console.error(error); }
@@ -343,7 +340,6 @@ export default function Home() {
     try { await updateDoc(doc(db, 'applications', appId), { isVan, capacity }); } catch (error) { console.error(error); }
   };
 
-  // 배정 화면에서 차량 인원 개별 증감 조절
   const adjustCapacity = async (appId: string, currentCap: string, delta: number) => {
     const newCap = Math.max(1, parseInt(currentCap || '4') + delta);
     try { await updateDoc(doc(db, 'applications', appId), { capacity: newCap.toString() }); } catch (error) { console.error(error); }
@@ -424,7 +420,6 @@ export default function Home() {
 
   const hasPushEnabled = !!profile?.fcmToken;
 
-  // 배정 현황 통계 계산
   const totalRiders = riders.length;
   const totalSeats = drivers.reduce((sum, d) => sum + parseInt(d.capacity || '4'), 0);
   const availableSeats = totalSeats - totalRiders;
@@ -432,13 +427,21 @@ export default function Home() {
   return (
     <div style={{ width: '100%', maxWidth: '480px', margin: '0 auto', background: '#f4f4f5', minHeight: '100vh', paddingBottom: '80px', fontFamily: 'sans-serif' }}>
       
+      {/* -------------------- HEADER -------------------- */}
       <header style={{ background: '#ffffff', padding: '15px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid #e4e4e7' }}>
         <h1 style={{ margin: 0, fontSize: '18px', color: '#18181b', fontWeight: 'bold' }}>{t.appTitle}</h1>
-        <div style={{ display: 'flex', gap: '8px' }}>
-          <button onClick={handleRefresh} disabled={isRefreshing} style={{ padding: '6px 10px', background: '#e4e4e7', borderRadius: '20px', border: 'none', fontSize: '12px', fontWeight: 'bold', cursor: 'pointer', opacity: isRefreshing ? 0.5 : 1 }}>
-            ↻ {isRefreshing ? '...' : t.refresh}
+        <div style={{ display: 'flex', gap: '5px' }}>
+          {/* 상단으로 올라온 프로필 & 설명서 버튼 */}
+          {user && profile && (
+            <>
+              <button onClick={() => setCurrentTab('profile')} style={{ padding: '6px 8px', background: '#e4e4e7', borderRadius: '6px', border: 'none', fontSize: '11px', fontWeight: 'bold', cursor: 'pointer' }}>{t.navProf}</button>
+              <button onClick={() => setCurrentTab('guide')} style={{ padding: '6px 8px', background: '#e4e4e7', borderRadius: '6px', border: 'none', fontSize: '11px', fontWeight: 'bold', cursor: 'pointer' }}>{t.navGuide}</button>
+            </>
+          )}
+          <button onClick={handleRefresh} disabled={isRefreshing} style={{ padding: '6px 8px', background: '#e4e4e7', borderRadius: '6px', border: 'none', fontSize: '11px', fontWeight: 'bold', cursor: 'pointer', opacity: isRefreshing ? 0.5 : 1 }}>
+            ↻
           </button>
-          <button onClick={() => setLang(lang === 'ko' ? 'en' : 'ko')} style={{ padding: '6px 10px', background: '#e4e4e7', borderRadius: '20px', border: 'none', fontSize: '12px', fontWeight: 'bold', cursor: 'pointer' }}>
+          <button onClick={() => setLang(lang === 'ko' ? 'en' : 'ko')} style={{ padding: '6px 8px', background: '#e4e4e7', borderRadius: '6px', border: 'none', fontSize: '11px', fontWeight: 'bold', cursor: 'pointer' }}>
             {lang === 'ko' ? 'EN' : 'KR'}
           </button>
         </div>
@@ -479,6 +482,7 @@ export default function Home() {
           </div>
         ) : (
           <>
+            {/* -------------------- 1. CALENDAR TAB -------------------- */}
             {currentTab === 'calendar' && (
               <div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', background: '#fff', padding: '15px', borderRadius: '16px' }}>
@@ -488,17 +492,21 @@ export default function Home() {
                 </div>
                 
                 <div style={{ background: '#fff', padding: '20px', borderRadius: '16px' }}>
-                  {/* 요일 헤더 추가 */}
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '5px' }}>
-                    {weekDays.map(wd => (
-                      <div key={wd} style={{ textAlign: 'center', fontSize: '12px', fontWeight: 'bold', color: '#64748b', marginBottom: '10px' }}>{wd}</div>
+                    {/* 요일 헤더 (일요일 빨강, 토요일 파랑) */}
+                    {weekDays.map((wd, index) => (
+                      <div key={wd} style={{ textAlign: 'center', fontSize: '12px', fontWeight: 'bold', color: index === 0 ? '#ef4444' : index === 6 ? '#3b82f6' : '#64748b', marginBottom: '10px' }}>{wd}</div>
                     ))}
                     {blanks.map(b => <div key={`blank-${b}`} />)}
+                    {/* 날짜 숫자 (일요일 빨강, 토요일 파랑) */}
                     {days.map(day => {
                       const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
                       const hasEvent = events.some(e => e.date === dateStr);
+                      const dayOfWeek = new Date(year, month, day).getDay();
+                      const textColor = selectedDate === dateStr ? '#fff' : (dayOfWeek === 0 ? '#ef4444' : dayOfWeek === 6 ? '#3b82f6' : '#18181b');
+                      
                       return (
-                        <div key={day} onClick={() => setSelectedDate(dateStr)} style={{ height: '45px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', borderRadius: '8px', background: selectedDate === dateStr ? '#18181b' : hasEvent ? '#f3f4f6' : 'transparent', color: selectedDate === dateStr ? '#fff' : '#18181b', fontWeight: hasEvent ? 'bold' : 'normal' }}>
+                        <div key={day} onClick={() => setSelectedDate(dateStr)} style={{ height: '45px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', borderRadius: '8px', background: selectedDate === dateStr ? '#18181b' : hasEvent ? '#f3f4f6' : 'transparent', color: textColor, fontWeight: hasEvent ? 'bold' : 'normal' }}>
                           <span>{day}</span>
                           {hasEvent && <div style={{ width: '5px', height: '5px', background: selectedDate === dateStr ? '#fff' : '#3b82f6', borderRadius: '50%', marginTop: '3px' }} />}
                         </div>
@@ -587,6 +595,117 @@ export default function Home() {
               </div>
             )}
 
+            {/* -------------------- 2. CREATE EVENT TAB -------------------- */}
+            {currentTab === 'create' && canManage && (
+              <div style={{ background: '#ffffff', padding: '20px', borderRadius: '12px' }}>
+                <h2 style={{ margin: '0 0 20px 0', fontSize: '18px' }}>{t.adminNew}</h2>
+                <form onSubmit={handleCreateEvent}>
+                  <div style={{ marginBottom: '15px' }}><label style={{ display: 'block', fontSize: '13px', fontWeight: 'bold', marginBottom: '5px' }}>{t.titleL}</label><input required value={newEvent.title} onChange={e => setNewEvent({...newEvent, title: e.target.value})} style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #ccc' }} /></div>
+                  <div style={{ marginBottom: '15px' }}><label style={{ display: 'block', fontSize: '13px', fontWeight: 'bold', marginBottom: '5px' }}>{t.dateL}</label><input required type="date" value={newEvent.date} onChange={e => setNewEvent({...newEvent, date: e.target.value})} style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #ccc' }} /></div>
+                  <div style={{ marginBottom: '15px' }}><label style={{ display: 'block', fontSize: '13px', fontWeight: 'bold', marginBottom: '5px' }}>{t.destL}</label><input required value={newEvent.destination} onChange={e => setNewEvent({...newEvent, destination: e.target.value})} style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #ccc' }} /></div>
+                  <button type="submit" style={{ width: '100%', padding: '12px', background: '#3b82f6', color: 'white', borderRadius: '8px', fontWeight: 'bold', border: 'none', cursor: 'pointer' }}>{creatingEvent ? t.creatingBtn : t.createBtn}</button>
+                </form>
+              </div>
+            )}
+
+            {/* -------------------- 3. ASSIGN TAB -------------------- */}
+            {currentTab === 'assign' && canManage && (
+              <div>
+                <h2 style={{ margin: '0 0 20px 0', fontSize: '18px' }}>{t.adminAssign}</h2>
+                <div style={{ display: 'flex', gap: '10px', marginBottom: '15px' }}>
+                  <select value={adminSelectedEventId} onChange={e => setAdminSelectedEventId(e.target.value)} style={{ flex: 1, padding: '12px', borderRadius: '8px', border: '1px solid #ccc' }}>
+                    <option value="">{t.selectEvt}</option>
+                    {events.map(ev => <option key={ev.id} value={ev.id}>{ev.date} - {ev.title}</option>)}
+                  </select>
+                  {adminSelectedEventId && (
+                    <button onClick={() => handleDeleteEvent(adminSelectedEventId)} style={{ padding: '0 15px', background: '#ef4444', color: '#fff', border: 'none', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer' }}>
+                      {t.deleteEvt}
+                    </button>
+                  )}
+                </div>
+
+                {adminSelectedEventId && (
+                  <>
+                    <div style={{ padding: '15px', background: availableSeats >= 0 ? '#ecfdf5' : '#fef2f2', borderRadius: '8px', marginBottom: '20px', border: `1px solid ${availableSeats >= 0 ? '#10b981' : '#ef4444'}`, display: 'flex', justifyContent: 'space-around', fontWeight: 'bold', fontSize: '13px' }}>
+                      <div style={{ textAlign: 'center' }}><span style={{ display: 'block', color: '#64748b', fontSize: '11px', marginBottom: '2px' }}>{t.statsTxt}</span>{totalRiders}</div>
+                      <div style={{ textAlign: 'center' }}><span style={{ display: 'block', color: '#64748b', fontSize: '11px', marginBottom: '2px' }}>{t.statsSeats}</span>{totalSeats}</div>
+                      <div style={{ textAlign: 'center', color: availableSeats >= 0 ? '#059669' : '#dc2626' }}><span style={{ display: 'block', fontSize: '11px', marginBottom: '2px' }}>{availableSeats >= 0 ? t.statsAvail : t.statsShort}</span>{Math.abs(availableSeats)}</div>
+                    </div>
+
+                    <div style={{ display: 'flex', background: '#e4e4e7', padding: '4px', borderRadius: '10px', marginBottom: '20px' }}>
+                      <button onClick={() => setRideDirection('to')} style={{ flex: 1, padding: '10px', borderRadius: '8px', border: 'none', background: rideDirection === 'to' ? '#fff' : 'transparent', fontWeight: 'bold', cursor: 'pointer' }}>{t.toEvt}</button>
+                      <button onClick={() => setRideDirection('from')} style={{ flex: 1, padding: '10px', borderRadius: '8px', border: 'none', background: rideDirection === 'from' ? '#fff' : 'transparent', fontWeight: 'bold', cursor: 'pointer' }}>{t.fromEvt}</button>
+                    </div>
+
+                    <div onDragOver={(e) => { e.preventDefault(); setDragOverCarId('waiting'); }} onDrop={(e) => handleDrop(e, null)} style={{ background: dragOverCarId === 'waiting' ? '#f3f4f6' : '#fff', padding: '15px', borderRadius: '12px', border: '1px solid #e4e4e7', marginBottom: '20px', minHeight: '100px' }}>
+                      <h4 style={{ margin: '0 0 10px 0' }}>{t.waitList} ({unassignedRiders.length})</h4>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                        {unassignedRiders.map(r => <div key={r.id} draggable onDragStart={e => e.dataTransfer.setData('passengerId', r.id)} style={{ padding: '6px 12px', background: '#f8fafc', border: '1px solid #cbd5e1', borderRadius: '20px', fontSize: '13px', fontWeight: 'bold', cursor: 'grab' }}>{r.name}</div>)}
+                      </div>
+                    </div>
+
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
+                      <h4 style={{ margin: 0 }}>{t.cars}</h4>
+                      {drivers.map(driver => {
+                        const passengers = riders.filter(r => rideDirection === 'to' ? r.carIdTo === driver.id : r.carIdFrom === driver.id);
+                        const isFull = passengers.length >= parseInt(driver.capacity || '4');
+                        return (
+                          <div key={driver.id} onDragOver={(e) => { e.preventDefault(); if(!isFull) setDragOverCarId(driver.id); }} onDrop={(e) => handleDrop(e, driver.id, driver.capacity)} style={{ background: isFull ? '#fff1f2' : (dragOverCarId === driver.id ? '#ecfdf5' : '#fff'), padding: '15px', borderRadius: '12px', border: isFull ? '2px solid #fecaca' : '1px solid #e4e4e7', position: 'relative' }}>
+                            {isFull && <div style={{ position: 'absolute', right: '-25px', top: '15px', background: '#ef4444', color: '#fff', fontSize: '11px', fontWeight: 'bold', padding: '4px 30px', transform: 'rotate(45deg)' }}>{t.full}</div>}
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                              <div style={{ fontWeight: 'bold' }}>{driver.isVan ? <span style={{ color: '#2563eb' }}>[Van] </span> : 'Car: '}{driver.name}</div>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                <button onClick={() => openNavigation(driver.id)} style={{ padding: '6px 10px', background: '#18181b', color: '#fff', border: 'none', borderRadius: '6px', fontSize: '12px', fontWeight: 'bold', cursor: 'pointer' }}>{t.mapNav}</button>
+                                
+                                <div style={{ display: 'flex', alignItems: 'center', background: '#f1f5f9', borderRadius: '6px', overflow: 'hidden', border: '1px solid #cbd5e1' }}>
+                                  <button onClick={() => adjustCapacity(driver.id, driver.capacity, -1)} style={{ padding: '4px 8px', border: 'none', background: '#e2e8f0', cursor: 'pointer', fontWeight: 'bold' }}>-</button>
+                                  <span style={{ padding: '0 8px', fontSize: '12px', fontWeight: 'bold' }}>{driver.capacity}</span>
+                                  <button onClick={() => adjustCapacity(driver.id, driver.capacity, 1)} style={{ padding: '4px 8px', border: 'none', background: '#e2e8f0', cursor: 'pointer', fontWeight: 'bold' }}>+</button>
+                                </div>
+                                
+                                <span style={{ color: isFull ? '#ef4444' : '#166534', fontWeight: 'bold', fontSize: '13px' }}>{passengers.length} / {driver.capacity}</span>
+                              </div>
+                            </div>
+                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', minHeight: '40px', background: '#f8fafc', padding: '10px', borderRadius: '8px' }}>
+                              {passengers.map(p => <div key={p.id} draggable onDragStart={e => e.dataTransfer.setData('passengerId', p.id)} style={{ padding: '6px 12px', background: '#3b82f6', color: '#fff', borderRadius: '20px', fontSize: '13px', fontWeight: 'bold' }}>{p.name}</div>)}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
+
+            {/* -------------------- 4. USERS TAB (목사님 전용) -------------------- */}
+            {currentTab === 'users' && profile.isAdmin && (
+              <div style={{ background: '#ffffff', padding: '15px', borderRadius: '12px', overflowX: 'auto' }}>
+                <h3 style={{ margin: '0 0 15px 0', fontSize: '16px' }}>{t.adminUsers} ({allUsersList.length})</h3>
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px', minWidth: '400px' }}>
+                  <thead>
+                    <tr style={{ background: '#f4f4f5', borderBottom: '2px solid #e4e4e7' }}>
+                      <th style={{ padding: '10px', textAlign: 'left' }}>{t.name}</th>
+                      <th style={{ padding: '10px', textAlign: 'left' }}>{t.phone}</th>
+                      <th style={{ padding: '10px', textAlign: 'left' }}>{t.address}</th>
+                      <th style={{ padding: '10px', textAlign: 'left' }}>{t.rideType}</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {allUsersList.map(u => (
+                      <tr key={u.id} style={{ borderBottom: '1px solid #e4e4e7' }}>
+                        <td style={{ padding: '10px', fontWeight: 'bold' }}>{u.name} {u.isAdmin && <span style={{ color: '#ef4444', fontSize: '10px', marginLeft: '4px' }}>(Admin)</span>}</td>
+                        <td style={{ padding: '10px' }}><a href={`tel:${u.phone}`} style={{ color: '#2563eb', textDecoration: 'none' }}>{u.phone}</a></td>
+                        <td style={{ padding: '10px' }}>{u.address}</td>
+                        <td style={{ padding: '10px' }}>{u.rideType} {u.isVan && <span style={{ color: '#059669', fontWeight: 'bold' }}>[Van]</span>}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+
+            {/* -------------------- PROFILE TAB (헤더 이동) -------------------- */}
             {currentTab === 'profile' && (
               <div style={{ background: '#ffffff', padding: '25px', borderRadius: '12px' }}>
                 <h2 style={{ margin: '0 0 20px 0', fontSize: '18px' }}>{t.myProfile}</h2>
@@ -613,6 +732,7 @@ export default function Home() {
               </div>
             )}
             
+            {/* -------------------- GUIDE TAB (헤더 이동) -------------------- */}
             {currentTab === 'guide' && (
               <div style={{ background: '#ffffff', padding: '25px', borderRadius: '12px', border: '1px solid #e4e4e7' }}>
                 <h2 style={{ margin: '0 0 20px 0', fontSize: '18px' }}>{t.guideTitle}</h2>
@@ -630,138 +750,19 @@ export default function Home() {
                 </div>
               </div>
             )}
-
-            {/* 관리(Manage) 탭: 운전자 & 관리자만 접근 가능 */}
-            {currentTab === 'admin' && canManage && (
-              <div>
-                <div style={{ display: 'flex', gap: '8px', marginBottom: '20px' }}>
-                  <button onClick={() => setAdminMode('create')} style={{ flex: 1, padding: '10px', borderRadius: '8px', border: 'none', background: adminMode === 'create' ? '#18181b' : '#e4e4e7', color: adminMode === 'create' ? '#fff' : '#71717a', fontWeight: 'bold', cursor: 'pointer', fontSize: '12px' }}>{t.adminNew}</button>
-                  <button onClick={() => setAdminMode('assign')} style={{ flex: 1, padding: '10px', borderRadius: '8px', border: 'none', background: adminMode === 'assign' ? '#18181b' : '#e4e4e7', color: adminMode === 'assign' ? '#fff' : '#71717a', fontWeight: 'bold', cursor: 'pointer', fontSize: '12px' }}>{t.adminAssign}</button>
-                  {/* 교인 명단은 진짜 관리자(isAdmin)에게만 보임 */}
-                  {profile.isAdmin && (
-                    <button onClick={() => setAdminMode('users')} style={{ flex: 1, padding: '10px', borderRadius: '8px', border: 'none', background: adminMode === 'users' ? '#18181b' : '#e4e4e7', color: adminMode === 'users' ? '#fff' : '#71717a', fontWeight: 'bold', cursor: 'pointer', fontSize: '12px' }}>{t.adminUsers}</button>
-                  )}
-                </div>
-
-                {adminMode === 'create' && (
-                  <div style={{ background: '#ffffff', padding: '20px', borderRadius: '12px' }}>
-                    <form onSubmit={handleCreateEvent}>
-                      <div style={{ marginBottom: '15px' }}><label style={{ display: 'block', fontSize: '13px', fontWeight: 'bold', marginBottom: '5px' }}>{t.titleL}</label><input required value={newEvent.title} onChange={e => setNewEvent({...newEvent, title: e.target.value})} style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #ccc' }} /></div>
-                      <div style={{ marginBottom: '15px' }}><label style={{ display: 'block', fontSize: '13px', fontWeight: 'bold', marginBottom: '5px' }}>{t.dateL}</label><input required type="date" value={newEvent.date} onChange={e => setNewEvent({...newEvent, date: e.target.value})} style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #ccc' }} /></div>
-                      <div style={{ marginBottom: '15px' }}><label style={{ display: 'block', fontSize: '13px', fontWeight: 'bold', marginBottom: '5px' }}>{t.destL}</label><input required value={newEvent.destination} onChange={e => setNewEvent({...newEvent, destination: e.target.value})} style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #ccc' }} /></div>
-                      <button type="submit" style={{ width: '100%', padding: '12px', background: '#3b82f6', color: 'white', borderRadius: '8px', fontWeight: 'bold', border: 'none', cursor: 'pointer' }}>{creatingEvent ? t.creatingBtn : t.createBtn}</button>
-                    </form>
-                  </div>
-                )}
-
-                {adminMode === 'users' && profile.isAdmin && (
-                  <div style={{ background: '#ffffff', padding: '15px', borderRadius: '12px', overflowX: 'auto' }}>
-                    <h3 style={{ margin: '0 0 15px 0', fontSize: '16px' }}>{t.adminUsers} ({allUsersList.length})</h3>
-                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px', minWidth: '400px' }}>
-                      <thead>
-                        <tr style={{ background: '#f4f4f5', borderBottom: '2px solid #e4e4e7' }}>
-                          <th style={{ padding: '10px', textAlign: 'left' }}>{t.name}</th>
-                          <th style={{ padding: '10px', textAlign: 'left' }}>{t.phone}</th>
-                          <th style={{ padding: '10px', textAlign: 'left' }}>{t.address}</th>
-                          <th style={{ padding: '10px', textAlign: 'left' }}>{t.rideType}</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {allUsersList.map(u => (
-                          <tr key={u.id} style={{ borderBottom: '1px solid #e4e4e7' }}>
-                            <td style={{ padding: '10px', fontWeight: 'bold' }}>{u.name} {u.isAdmin && <span style={{ color: '#ef4444', fontSize: '10px', marginLeft: '4px' }}>(Admin)</span>}</td>
-                            <td style={{ padding: '10px' }}><a href={`tel:${u.phone}`} style={{ color: '#2563eb', textDecoration: 'none' }}>{u.phone}</a></td>
-                            <td style={{ padding: '10px' }}>{u.address}</td>
-                            <td style={{ padding: '10px' }}>{u.rideType} {u.isVan && <span style={{ color: '#059669', fontWeight: 'bold' }}>(Van)</span>}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
-
-                {adminMode === 'assign' && (
-                  <div>
-                    <div style={{ display: 'flex', gap: '10px', marginBottom: '15px' }}>
-                      <select value={adminSelectedEventId} onChange={e => setAdminSelectedEventId(e.target.value)} style={{ flex: 1, padding: '12px', borderRadius: '8px', border: '1px solid #ccc' }}>
-                        <option value="">{t.selectEvt}</option>
-                        {events.map(ev => <option key={ev.id} value={ev.id}>{ev.date} - {ev.title}</option>)}
-                      </select>
-                      {/* 일정 삭제 버튼 */}
-                      {adminSelectedEventId && (
-                        <button onClick={() => handleDeleteEvent(adminSelectedEventId)} style={{ padding: '0 15px', background: '#ef4444', color: '#fff', border: 'none', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer' }}>
-                          {t.deleteEvt}
-                        </button>
-                      )}
-                    </div>
-
-                    {adminSelectedEventId && (
-                      <>
-                        {/* 실시간 통계 현황판 */}
-                        <div style={{ padding: '15px', background: availableSeats >= 0 ? '#ecfdf5' : '#fef2f2', borderRadius: '8px', marginBottom: '20px', border: `1px solid ${availableSeats >= 0 ? '#10b981' : '#ef4444'}`, display: 'flex', justifyContent: 'space-around', fontWeight: 'bold', fontSize: '13px' }}>
-                          <div style={{ textAlign: 'center' }}><span style={{ display: 'block', color: '#64748b', fontSize: '11px', marginBottom: '2px' }}>{t.statsTxt}</span>{totalRiders}</div>
-                          <div style={{ textAlign: 'center' }}><span style={{ display: 'block', color: '#64748b', fontSize: '11px', marginBottom: '2px' }}>{t.statsSeats}</span>{totalSeats}</div>
-                          <div style={{ textAlign: 'center', color: availableSeats >= 0 ? '#059669' : '#dc2626' }}><span style={{ display: 'block', fontSize: '11px', marginBottom: '2px' }}>{availableSeats >= 0 ? t.statsAvail : t.statsShort}</span>{Math.abs(availableSeats)}</div>
-                        </div>
-
-                        <div style={{ display: 'flex', background: '#e4e4e7', padding: '4px', borderRadius: '10px', marginBottom: '20px' }}>
-                          <button onClick={() => setRideDirection('to')} style={{ flex: 1, padding: '10px', borderRadius: '8px', border: 'none', background: rideDirection === 'to' ? '#fff' : 'transparent', fontWeight: 'bold', cursor: 'pointer' }}>{t.toEvt}</button>
-                          <button onClick={() => setRideDirection('from')} style={{ flex: 1, padding: '10px', borderRadius: '8px', border: 'none', background: rideDirection === 'from' ? '#fff' : 'transparent', fontWeight: 'bold', cursor: 'pointer' }}>{t.fromEvt}</button>
-                        </div>
-
-                        <div onDragOver={(e) => { e.preventDefault(); setDragOverCarId('waiting'); }} onDrop={(e) => handleDrop(e, null)} style={{ background: dragOverCarId === 'waiting' ? '#f3f4f6' : '#fff', padding: '15px', borderRadius: '12px', border: '1px solid #e4e4e7', marginBottom: '20px', minHeight: '100px' }}>
-                          <h4 style={{ margin: '0 0 10px 0' }}>{t.waitList} ({unassignedRiders.length})</h4>
-                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-                            {unassignedRiders.map(r => <div key={r.id} draggable onDragStart={e => e.dataTransfer.setData('passengerId', r.id)} style={{ padding: '6px 12px', background: '#f8fafc', border: '1px solid #cbd5e1', borderRadius: '20px', fontSize: '13px', fontWeight: 'bold', cursor: 'grab' }}>{r.name}</div>)}
-                          </div>
-                        </div>
-
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
-                          <h4 style={{ margin: 0 }}>{t.cars}</h4>
-                          {drivers.map(driver => {
-                            const passengers = riders.filter(r => rideDirection === 'to' ? r.carIdTo === driver.id : r.carIdFrom === driver.id);
-                            const isFull = passengers.length >= parseInt(driver.capacity || '4');
-                            return (
-                              <div key={driver.id} onDragOver={(e) => { e.preventDefault(); if(!isFull) setDragOverCarId(driver.id); }} onDrop={(e) => handleDrop(e, driver.id, driver.capacity)} style={{ background: isFull ? '#fff1f2' : (dragOverCarId === driver.id ? '#ecfdf5' : '#fff'), padding: '15px', borderRadius: '12px', border: isFull ? '2px solid #fecaca' : '1px solid #e4e4e7', position: 'relative' }}>
-                                {isFull && <div style={{ position: 'absolute', right: '-25px', top: '15px', background: '#ef4444', color: '#fff', fontSize: '11px', fontWeight: 'bold', padding: '4px 30px', transform: 'rotate(45deg)' }}>{t.full}</div>}
-                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
-                                  <div style={{ fontWeight: 'bold' }}>{driver.isVan ? <span style={{ color: '#2563eb' }}>[Van] </span> : 'Car: '}{driver.name}</div>
-                                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                                    <button onClick={() => openNavigation(driver.id)} style={{ padding: '6px 10px', background: '#18181b', color: '#fff', border: 'none', borderRadius: '6px', fontSize: '12px', fontWeight: 'bold', cursor: 'pointer' }}>{t.mapNav}</button>
-                                    
-                                    {/* 차량 인원 플러스 마이너스 버튼 추가 */}
-                                    <div style={{ display: 'flex', alignItems: 'center', background: '#f1f5f9', borderRadius: '6px', overflow: 'hidden', border: '1px solid #cbd5e1' }}>
-                                      <button onClick={() => adjustCapacity(driver.id, driver.capacity, -1)} style={{ padding: '4px 8px', border: 'none', background: '#e2e8f0', cursor: 'pointer', fontWeight: 'bold' }}>-</button>
-                                      <span style={{ padding: '0 8px', fontSize: '12px', fontWeight: 'bold' }}>{driver.capacity}</span>
-                                      <button onClick={() => adjustCapacity(driver.id, driver.capacity, 1)} style={{ padding: '4px 8px', border: 'none', background: '#e2e8f0', cursor: 'pointer', fontWeight: 'bold' }}>+</button>
-                                    </div>
-                                    
-                                    <span style={{ color: isFull ? '#ef4444' : '#166534', fontWeight: 'bold', fontSize: '13px' }}>{passengers.length} / {driver.capacity}</span>
-                                  </div>
-                                </div>
-                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', minHeight: '40px', background: '#f8fafc', padding: '10px', borderRadius: '8px' }}>
-                                  {passengers.map(p => <div key={p.id} draggable onDragStart={e => e.dataTransfer.setData('passengerId', p.id)} style={{ padding: '6px 12px', background: '#3b82f6', color: '#fff', borderRadius: '20px', fontSize: '13px', fontWeight: 'bold' }}>{p.name}</div>)}
-                                </div>
-                              </div>
-                            );
-                          })}
-                        </div>
-                      </>
-                    )}
-                  </div>
-                )}
-              </div>
-            )}
           </>
         )}
       </main>
 
+      {/* -------------------- BOTTOM NAVIGATION (핵심 기능 노출) -------------------- */}
       {user && profile && (
         <nav style={{ position: 'fixed', bottom: 0, left: '50%', transform: 'translateX(-50%)', width: '100%', maxWidth: '480px', background: '#ffffff', display: 'flex', borderTop: '1px solid #e4e4e7' }}>
           <button onClick={() => setCurrentTab('calendar')} style={{ flex: 1, padding: '15px 0', background: 'none', border: 'none', color: currentTab === 'calendar' ? '#18181b' : '#a1a1aa', fontWeight: currentTab === 'calendar' ? 'bold' : 'normal', fontSize: '13px', cursor: 'pointer' }}>{t.navCal}</button>
-          <button onClick={() => setCurrentTab('profile')} style={{ flex: 1, padding: '15px 0', background: 'none', border: 'none', color: currentTab === 'profile' ? '#18181b' : '#a1a1aa', fontWeight: currentTab === 'profile' ? 'bold' : 'normal', fontSize: '13px', cursor: 'pointer' }}>{t.navProf}</button>
-          <button onClick={() => setCurrentTab('guide')} style={{ flex: 1, padding: '15px 0', background: 'none', border: 'none', color: currentTab === 'guide' ? '#18181b' : '#a1a1aa', fontWeight: currentTab === 'guide' ? 'bold' : 'normal', fontSize: '13px', cursor: 'pointer' }}>{t.navGuide}</button>
-          {canManage && <button onClick={() => setCurrentTab('admin')} style={{ flex: 1, padding: '15px 0', background: 'none', border: 'none', color: currentTab === 'admin' ? '#18181b' : '#a1a1aa', fontWeight: currentTab === 'admin' ? 'bold' : 'normal', fontSize: '13px', cursor: 'pointer' }}>{t.navAdmin}</button>}
+          
+          {canManage && <button onClick={() => setCurrentTab('create')} style={{ flex: 1, padding: '15px 0', background: 'none', border: 'none', color: currentTab === 'create' ? '#18181b' : '#a1a1aa', fontWeight: currentTab === 'create' ? 'bold' : 'normal', fontSize: '13px', cursor: 'pointer' }}>{t.adminNew}</button>}
+          {canManage && <button onClick={() => setCurrentTab('assign')} style={{ flex: 1, padding: '15px 0', background: 'none', border: 'none', color: currentTab === 'assign' ? '#18181b' : '#a1a1aa', fontWeight: currentTab === 'assign' ? 'bold' : 'normal', fontSize: '13px', cursor: 'pointer' }}>{t.adminAssign}</button>}
+          
+          {profile.isAdmin && <button onClick={() => setCurrentTab('users')} style={{ flex: 1, padding: '15px 0', background: 'none', border: 'none', color: currentTab === 'users' ? '#18181b' : '#a1a1aa', fontWeight: currentTab === 'users' ? 'bold' : 'normal', fontSize: '13px', cursor: 'pointer' }}>{t.adminUsers}</button>}
         </nav>
       )}
     </div>
