@@ -50,20 +50,22 @@ const text = {
     regular: "Regular Worship", special: "Special Event", myAssignment: "My Assignment", driverTxt: "Driver", statusTxt: "Driver Status",
     waitPickup: "Waiting at pickup area", myPassengers: "My Passengers", call: "Call", noPass: "No passengers assigned yet.",
     departed: "Departed", arrived: "Arrived", applyBtn: "1-Click Apply", appliedBtn: "Applied", cancelBtn: "Cancel", noEvent: "No events registered for this date.",
-    adminNew: "New Event", adminAssign: "Assignments", adminUsers: "Users List", titleL: "Title", dateL: "Date", destL: "Destination", typeL: "Event Type",
+    adminNew: "New Event", adminAssign: "Assignments", adminUsers: "User Roster", titleL: "Title", dateL: "Date", destL: "Destination", typeL: "Event Type",
     createBtn: "Create Event", creatingBtn: "Creating...", selectEvt: "-- Select Event to Manage --", toEvt: "To Event", fromEvt: "From Event",
     waitList: "Waiting List", allAssig: "All assigned", cars: "Cars", full: "FULL", mapNav: "Map Navi", dropHere: "Drop here", noDriv: "No drivers available.",
-    navCal: "Calendar", navProf: "Profile", navAdmin: "Admin", navGuide: "Guide", guideTitle: "User Guide",
+    navCal: "Calendar", navProf: "Profile", navAdmin: "Manage", navGuide: "Guide", guideTitle: "User Guide",
     g1T: "1. Install the App", g1D: "iOS: Safari Share Button > 'Add to Home Screen'\nAndroid: Chrome Menu > 'Add to Home screen'",
     g2T: "2. Ride Application", g2D: "Go to Calendar, select a date, and click '1-Click Apply'.",
     g3T: "3. Status Update", g3D: "Use the status buttons or type a custom message to notify your driver/passengers in real-time.",
     loading: "Loading...", msgPlaceholder: "Type message...", sendBtn: "Send", vehicleType: "Vehicle", personalCar: "Personal Car", churchVan: "Church Van (15 seats)", seats: "seats",
     refresh: "Refresh", statusUpdated: "Status updated.", msgSent: "Message sent.", refreshed: "Data refreshed successfully.",
     assignedTitle: "Ride Assigned", assignedBody: "A driver has been assigned to you.", alertTitle: "Driver Update", newMsg: "New Message",
-    pushEnabled: "Push Notifications ON", pushDisabled: "Enable Push Notifications", disablePushConfirm: "Do you want to disable push notifications?"
+    pushEnabled: "Push Notifications ON", pushDisabled: "Enable Push Notifications", disablePushConfirm: "Do you want to disable push notifications?",
+    deleteEvt: "Delete Event", confirmDeleteEvt: "Are you sure you want to delete this event? All ride applications will be removed.",
+    statsTxt: "Total Riders", statsSeats: "Total Seats", statsAvail: "Seats Available", statsShort: "Seat Shortage"
   },
   ko: {
-    appTitle: "리빙스톤 리프트", loginReq: "앱을 사용하려면 로그인해 주세요.", loginBtn: "구글 계정으로 시작하기",
+    appTitle: "Livingstone Lift", loginReq: "앱을 사용하려면 로그인해 주세요.", loginBtn: "구글 계정으로 시작하기",
     createProfile: "프로필 생성", name: "이름", phone: "연락처", address: "픽업 주소", rideType: "탑승 유형", capacity: "탑승 가능 인원(운전자 본인 제외)",
     needRide: "라이드 필요", canDrive: "운전 가능", driveSelf: "개별 이동", van: "상황에 따라 교회 밴도 운전합니다", save: "프로필 저장", saving: "저장 중...",
     myProfile: "내 프로필", signOut: "로그아웃", prev: "이전", next: "다음", scheduleTitle: "선택된 날짜의 일정",
@@ -73,14 +75,16 @@ const text = {
     adminNew: "새 일정", adminAssign: "인원 배정", adminUsers: "교인 명단", titleL: "일정 이름", dateL: "날짜", destL: "목적지", typeL: "일정 종류",
     createBtn: "일정 생성", creatingBtn: "생성 중...", selectEvt: "-- 관리할 일정 선택 --", toEvt: "교회로 갈 때 (To)", fromEvt: "집으로 갈 때 (From)",
     waitList: "대기 명단", allAssig: "배정 완료", cars: "차량 목록", full: "만차", mapNav: "지도 내비", dropHere: "여기로 드래그", noDriv: "가능한 운전자가 없습니다.",
-    navCal: "일정", navProf: "프로필", navAdmin: "관리자", navGuide: "설명서", guideTitle: "앱 사용 설명서",
+    navCal: "일정", navProf: "프로필", navAdmin: "관리", navGuide: "설명서", guideTitle: "앱 사용 설명서",
     g1T: "1. 앱 설치하기", g1D: "아이폰: Safari 하단 공유 버튼 > '홈 화면에 추가'\n안드로이드: Chrome 우측 상단 메뉴 > '홈 화면에 추가'",
     g2T: "2. 라이드 신청하기", g2D: "일정(Calendar) 탭에서 날짜를 누르고 '1클릭 신청' 버튼을 누르면 신청이 완료됩니다.",
     g3T: "3. 실시간 톡/상태 알림", g3D: "출발 당일 상태 버튼을 누르거나 직접 텍스트를 입력해서 메시지를 전송하면 상대방에게 즉시 표시됩니다.",
     loading: "로딩 중...", msgPlaceholder: "메시지 직접 입력...", sendBtn: "전송", vehicleType: "운행 차량", personalCar: "개인 자가용", churchVan: "교회 밴 (15인승)", seats: "인승",
     refresh: "새로고침", statusUpdated: "상태가 전송되었습니다.", msgSent: "메시지가 전송되었습니다.", refreshed: "최신 정보로 새로고침 되었습니다.",
     assignedTitle: "배차 완료", assignedBody: "차량이 성공적으로 배정되었습니다.", alertTitle: "운전자 상태 업데이트", newMsg: "새 메시지",
-    pushEnabled: "✅ 푸시 알림 켜짐 (끄기)", pushDisabled: "푸시 알림 켜기", disablePushConfirm: "푸시 알림을 끄시겠습니까?"
+    pushEnabled: "✅ 푸시 알림 켜짐 (끄기)", pushDisabled: "푸시 알림 켜기", disablePushConfirm: "푸시 알림을 끄시겠습니까?",
+    deleteEvt: "일정 삭제", confirmDeleteEvt: "정말로 이 일정을 삭제하시겠습니까? 신청 내역도 모두 삭제됩니다.",
+    statsTxt: "신청 인원", statsSeats: "전체 좌석", statsAvail: "남은 자리", statsShort: "자리 부족"
   }
 };
 
@@ -93,6 +97,7 @@ const statusMap: Record<string, {en: string, ko: string}> = {
 export default function Home() {
   const [lang, setLang] = useState<'ko' | 'en'>('ko');
   const t = text[lang];
+  const weekDays = lang === 'ko' ? ['일', '월', '화', '수', '목', '금', '토'] : ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
   
   const displayStatus = (status: string) => statusMap[status]?.[lang] || status;
 
@@ -116,7 +121,6 @@ export default function Home() {
   const [newEvent, setNewEvent] = useState({ title: '', date: '', destination: '', type: 'regular' });
   const [creatingEvent, setCreatingEvent] = useState(false);
 
-  // Admin Mode updated to include 'users'
   const [adminMode, setAdminMode] = useState<'create' | 'assign' | 'users'>('create');
   const [adminSelectedEventId, setAdminSelectedEventId] = useState<string>('');
   const [eventAttendees, setEventAttendees] = useState<Application[]>([]);
@@ -127,16 +131,12 @@ export default function Home() {
   const [customMsg, setCustomMsg] = useState<Record<string, string>>({});
   const prevAppsRef = useRef<Record<string, Application>>({});
 
-  // Service Worker Registration
+  // 운전자이거나 관리자일 경우 관리 탭 접근 가능
+  const canManage = profile?.isAdmin || profile?.rideType === 'Can Drive';
+
   useEffect(() => {
     if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
-      navigator.serviceWorker.register('/firebase-messaging-sw.js')
-        .then((registration) => {
-          console.log('Service Worker registered with scope:', registration.scope);
-        })
-        .catch((err) => {
-          console.error('Service Worker registration failed:', err);
-        });
+      navigator.serviceWorker.register('/firebase-messaging-sw.js').catch(err => console.error(err));
     }
   }, []);
 
@@ -172,17 +172,13 @@ export default function Home() {
           const prevData = prevAppsRef.current[data.id];
           
           if (change.type === 'modified' && prevData) {
-            if (data.userId === uid && data.role === 'rider') {
-              if (!prevData.carIdTo && data.carIdTo) {
-                showLocalNotification(t.assignedTitle, t.assignedBody);
-              }
+            if (data.userId === uid && data.role === 'rider' && !prevData.carIdTo && data.carIdTo) {
+              showLocalNotification(t.assignedTitle, t.assignedBody);
             }
             if (data.role === 'driver') {
               const myApp = appliedMap[data.eventId];
-              if (myApp && myApp.carIdTo === data.id) {
-                if (prevData.statusTo !== data.statusTo && data.statusTo) {
-                  showLocalNotification(t.alertTitle, data.statusTo);
-                }
+              if (myApp && myApp.carIdTo === data.id && prevData.statusTo !== data.statusTo && data.statusTo) {
+                showLocalNotification(t.alertTitle, data.statusTo);
               }
             }
           }
@@ -216,15 +212,11 @@ export default function Home() {
         if (unsubscribeAll) unsubscribeAll();
       }
     });
-    
     return () => { unsubscribeAuth(); };
   }, [lang]);
 
-  // Push Notification Toggle Logic
   const togglePushNotification = async () => {
     if (!user || !profile) return;
-    
-    // If already has token, confirm to disable
     if (profile.fcmToken) {
       if (confirm(t.disablePushConfirm)) {
         try {
@@ -235,7 +227,6 @@ export default function Home() {
       return;
     }
 
-    // Otherwise, request permission and enable
     if (typeof window === 'undefined' || !('Notification' in window)) {
       alert(lang === 'ko' ? '아이폰은 화면 하단 공유 버튼을 눌러 [홈 화면에 추가]를 해야 푸시 알림을 켤 수 있습니다.' : 'Please add this app to your Home Screen to enable push notifications.');
       return;
@@ -245,9 +236,7 @@ export default function Home() {
     try {
       const permission = await Notification.requestPermission();
       if (permission === 'granted') {
-        const token = await getToken(messaging, {
-          vapidKey: 'BJk6feu2WhkttIgPvgw977NbtMd_1RfEfMFqpYECAZgSxeeqSVmGRXnkYDABCXFMWcN9-fEnGUXStxjSX_QOvcU'
-        });
+        const token = await getToken(messaging, { vapidKey: 'BJk6feu2WhkttIgPvgw977NbtMd_1RfEfMFqpYECAZgSxeeqSVmGRXnkYDABCXFMWcN9-fEnGUXStxjSX_QOvcU' });
         if (token) {
           await updateDoc(doc(db, 'users', user.uid), { fcmToken: token });
           setProfile({ ...profile, fcmToken: token });
@@ -255,10 +244,7 @@ export default function Home() {
       } else {
         alert(lang === 'ko' ? '알림 권한이 거부되었습니다. 기기 설정에서 알림을 허용해주세요.' : 'Notification permission denied.');
       }
-    } catch (error) { 
-      console.error(error); 
-      alert(lang === 'ko' ? '알림 설정 중 오류가 발생했습니다.' : 'Error setting up notifications.');
-    }
+    } catch (error) { console.error(error); alert(lang === 'ko' ? '알림 설정 중 오류가 발생했습니다.' : 'Error setting up notifications.'); }
   };
 
   const fetchUserProfile = async (uid: string) => {
@@ -267,10 +253,7 @@ export default function Home() {
       if (docSnap.exists()) {
         const data = docSnap.data() as UserProfile;
         setProfile(data);
-        setFormData({
-          name: data.name || '', phone: data.phone || '', address: data.address || '',
-          rideType: data.rideType || 'Need a Ride', capacity: data.capacity || '4', isVan: data.isVan || false
-        });
+        setFormData({ name: data.name || '', phone: data.phone || '', address: data.address || '', rideType: data.rideType || 'Need a Ride', capacity: data.capacity || '4', isVan: data.isVan || false });
       }
     } catch (error) { console.error(error); } finally { setLoading(false); }
   };
@@ -283,7 +266,6 @@ export default function Home() {
     } catch (error) { console.error(error); }
   };
 
-  // Fetch all users for Admin User List
   const fetchAllUsers = async () => {
     if (!profile?.isAdmin) return;
     try {
@@ -293,7 +275,6 @@ export default function Home() {
     } catch (error) { console.error(error); }
   };
 
-  // Update attendees list based on selected event
   useEffect(() => {
     let unsubAdmin: () => void;
     if (adminSelectedEventId) {
@@ -301,25 +282,15 @@ export default function Home() {
       unsubAdmin = onSnapshot(q, (snapshot) => {
         setEventAttendees(snapshot.docs.map(docSnap => ({ ...docSnap.data(), id: docSnap.id })) as Application[]);
       });
-    } else {
-      setEventAttendees([]);
-    }
+    } else setEventAttendees([]);
     return () => { if (unsubAdmin) unsubAdmin(); };
   }, [adminSelectedEventId]);
 
-  // Fetch all users when admin navigates to 'users' tab
-  useEffect(() => {
-    if (adminMode === 'users') {
-      fetchAllUsers();
-    }
-  }, [adminMode]);
+  useEffect(() => { if (adminMode === 'users') fetchAllUsers(); }, [adminMode]);
 
   const handleLogin = () => signInWithPopup(auth, googleProvider);
   const handleLogout = () => { signOut(auth); setProfile(null); setCurrentTab('calendar'); };
-  
-  const handleRefresh = () => {
-    window.location.reload();
-  };
+  const handleRefresh = () => window.location.reload();
 
   const handleSaveProfile = async (e: React.FormEvent) => {
     e.preventDefault(); if (!user) return; setSaving(true);
@@ -339,6 +310,22 @@ export default function Home() {
     } finally { setCreatingEvent(false); }
   };
 
+  // 일정 삭제 함수 추가
+  const handleDeleteEvent = async (eventId: string) => {
+    if (confirm(t.confirmDeleteEvt)) {
+      try {
+        await deleteDoc(doc(db, 'events', eventId));
+        // 연관된 신청서 모두 삭제
+        const appQ = query(collection(db, 'applications'), where('eventId', '==', eventId));
+        const appSnap = await getDocs(appQ);
+        appSnap.forEach(d => deleteDoc(d.ref));
+        
+        setAdminSelectedEventId('');
+        await fetchEvents();
+      } catch (error) { console.error(error); }
+    }
+  };
+
   const handleApply = async (event: ChurchEvent) => {
     if (!user || !profile) return;
     try {
@@ -350,12 +337,16 @@ export default function Home() {
     } catch (error) { console.error(error); }
   };
 
-  const handleCancelApplication = async (eventId: string) => {
-    if (user) await deleteDoc(doc(db, 'applications', `${eventId}_${user.uid}`));
-  };
+  const handleCancelApplication = async (eventId: string) => { if (user) await deleteDoc(doc(db, 'applications', `${eventId}_${user.uid}`)); };
 
   const updateVehicle = async (appId: string, isVan: boolean, capacity: string) => {
     try { await updateDoc(doc(db, 'applications', appId), { isVan, capacity }); } catch (error) { console.error(error); }
+  };
+
+  // 배정 화면에서 차량 인원 개별 증감 조절
+  const adjustCapacity = async (appId: string, currentCap: string, delta: number) => {
+    const newCap = Math.max(1, parseInt(currentCap || '4') + delta);
+    try { await updateDoc(doc(db, 'applications', appId), { capacity: newCap.toString() }); } catch (error) { console.error(error); }
   };
 
   const sendPushToUser = async (targetUserId: string, title: string, body: string) => {
@@ -363,11 +354,7 @@ export default function Home() {
       const snap = await getDoc(doc(db, 'users', targetUserId));
       const token = snap.data()?.fcmToken;
       if (token) {
-        await fetch('/api/send-notification', { 
-          method: 'POST', 
-          headers: { 'Content-Type': 'application/json' }, 
-          body: JSON.stringify({ token, title, body }) 
-        });
+        await fetch('/api/send-notification', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ token, title, body }) });
       }
     } catch (error) { console.error("Push failed", error); }
   };
@@ -375,21 +362,17 @@ export default function Home() {
   const updateStatus = async (userApp: Application, direction: 'to' | 'from', statusMsg: string, isCustomMsg = false) => {
     try {
       await updateDoc(doc(db, 'applications', userApp.id), { [direction === 'to' ? 'statusTo' : 'statusFrom']: statusMsg });
-      
       const title = isCustomMsg ? t.newMsg : t.alertTitle;
       const body = `${userApp.name}: ${statusMsg}`;
       
       if (userApp.role === 'driver') {
         const passengers = eventAttendees.filter(a => direction === 'to' ? a.carIdTo === userApp.id : a.carIdFrom === userApp.id);
-        for (const p of passengers) {
-          await sendPushToUser(p.userId, title, body);
-        }
+        for (const p of passengers) await sendPushToUser(p.userId, title, body);
       } else {
         const driverAppId = direction === 'to' ? userApp.carIdTo : userApp.carIdFrom;
         const driverApp = eventAttendees.find(a => a.id === driverAppId);
         if (driverApp) await sendPushToUser(driverApp.userId, title, body);
       }
-      
       alert(isCustomMsg ? t.msgSent : t.statusUpdated);
     } catch (error) { console.error(error); }
   };
@@ -430,8 +413,7 @@ export default function Home() {
 
   if (loading) return <div style={{ padding: '50px', textAlign: 'center' }}>{t.loading}</div>;
 
-  const year = currentDate.getFullYear();
-  const month = currentDate.getMonth();
+  const year = currentDate.getFullYear(); const month = currentDate.getMonth();
   const blanks = Array.from({ length: new Date(year, month, 1).getDay() }, (_, i) => i);
   const days = Array.from({ length: new Date(year, month + 1, 0).getDate() }, (_, i) => i + 1);
   const monthNames = lang === 'ko' ? ["1월","2월","3월","4월","5월","6월","7월","8월","9월","10월","11월","12월"] : ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
@@ -441,6 +423,11 @@ export default function Home() {
   const unassignedRiders = riders.filter(r => rideDirection === 'to' ? r.carIdTo === null : r.carIdFrom === null);
 
   const hasPushEnabled = !!profile?.fcmToken;
+
+  // 배정 현황 통계 계산
+  const totalRiders = riders.length;
+  const totalSeats = drivers.reduce((sum, d) => sum + parseInt(d.capacity || '4'), 0);
+  const availableSeats = totalSeats - totalRiders;
 
   return (
     <div style={{ width: '100%', maxWidth: '480px', margin: '0 auto', background: '#f4f4f5', minHeight: '100vh', paddingBottom: '80px', fontFamily: 'sans-serif' }}>
@@ -501,7 +488,11 @@ export default function Home() {
                 </div>
                 
                 <div style={{ background: '#fff', padding: '20px', borderRadius: '16px' }}>
+                  {/* 요일 헤더 추가 */}
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '5px' }}>
+                    {weekDays.map(wd => (
+                      <div key={wd} style={{ textAlign: 'center', fontSize: '12px', fontWeight: 'bold', color: '#64748b', marginBottom: '10px' }}>{wd}</div>
+                    ))}
                     {blanks.map(b => <div key={`blank-${b}`} />)}
                     {days.map(day => {
                       const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
@@ -605,7 +596,6 @@ export default function Home() {
                   <p style={{ margin: '0 0 10px 0', fontSize: '14px' }}><strong>{t.address}:</strong> {profile.address}</p>
                   <p style={{ margin: '0 0 10px 0', fontSize: '14px' }}><strong>{t.rideType}:</strong> {profile.rideType}</p>
                   
-                  {/* Push Notification Toggle Button */}
                   <div style={{ marginTop: '15px', paddingTop: '15px', borderTop: '1px solid #e2e8f0' }}>
                     <button 
                       onClick={togglePushNotification} 
@@ -641,12 +631,16 @@ export default function Home() {
               </div>
             )}
 
-            {currentTab === 'admin' && profile.isAdmin && (
+            {/* 관리(Manage) 탭: 운전자 & 관리자만 접근 가능 */}
+            {currentTab === 'admin' && canManage && (
               <div>
                 <div style={{ display: 'flex', gap: '8px', marginBottom: '20px' }}>
                   <button onClick={() => setAdminMode('create')} style={{ flex: 1, padding: '10px', borderRadius: '8px', border: 'none', background: adminMode === 'create' ? '#18181b' : '#e4e4e7', color: adminMode === 'create' ? '#fff' : '#71717a', fontWeight: 'bold', cursor: 'pointer', fontSize: '12px' }}>{t.adminNew}</button>
                   <button onClick={() => setAdminMode('assign')} style={{ flex: 1, padding: '10px', borderRadius: '8px', border: 'none', background: adminMode === 'assign' ? '#18181b' : '#e4e4e7', color: adminMode === 'assign' ? '#fff' : '#71717a', fontWeight: 'bold', cursor: 'pointer', fontSize: '12px' }}>{t.adminAssign}</button>
-                  <button onClick={() => setAdminMode('users')} style={{ flex: 1, padding: '10px', borderRadius: '8px', border: 'none', background: adminMode === 'users' ? '#18181b' : '#e4e4e7', color: adminMode === 'users' ? '#fff' : '#71717a', fontWeight: 'bold', cursor: 'pointer', fontSize: '12px' }}>{t.adminUsers}</button>
+                  {/* 교인 명단은 진짜 관리자(isAdmin)에게만 보임 */}
+                  {profile.isAdmin && (
+                    <button onClick={() => setAdminMode('users')} style={{ flex: 1, padding: '10px', borderRadius: '8px', border: 'none', background: adminMode === 'users' ? '#18181b' : '#e4e4e7', color: adminMode === 'users' ? '#fff' : '#71717a', fontWeight: 'bold', cursor: 'pointer', fontSize: '12px' }}>{t.adminUsers}</button>
+                  )}
                 </div>
 
                 {adminMode === 'create' && (
@@ -660,7 +654,7 @@ export default function Home() {
                   </div>
                 )}
 
-                {adminMode === 'users' && (
+                {adminMode === 'users' && profile.isAdmin && (
                   <div style={{ background: '#ffffff', padding: '15px', borderRadius: '12px', overflowX: 'auto' }}>
                     <h3 style={{ margin: '0 0 15px 0', fontSize: '16px' }}>{t.adminUsers} ({allUsersList.length})</h3>
                     <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px', minWidth: '400px' }}>
@@ -688,13 +682,28 @@ export default function Home() {
 
                 {adminMode === 'assign' && (
                   <div>
-                    <select value={adminSelectedEventId} onChange={e => setAdminSelectedEventId(e.target.value)} style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid #ccc', marginBottom: '15px' }}>
-                      <option value="">{t.selectEvt}</option>
-                      {events.map(ev => <option key={ev.id} value={ev.id}>{ev.date} - {ev.title}</option>)}
-                    </select>
+                    <div style={{ display: 'flex', gap: '10px', marginBottom: '15px' }}>
+                      <select value={adminSelectedEventId} onChange={e => setAdminSelectedEventId(e.target.value)} style={{ flex: 1, padding: '12px', borderRadius: '8px', border: '1px solid #ccc' }}>
+                        <option value="">{t.selectEvt}</option>
+                        {events.map(ev => <option key={ev.id} value={ev.id}>{ev.date} - {ev.title}</option>)}
+                      </select>
+                      {/* 일정 삭제 버튼 */}
+                      {adminSelectedEventId && (
+                        <button onClick={() => handleDeleteEvent(adminSelectedEventId)} style={{ padding: '0 15px', background: '#ef4444', color: '#fff', border: 'none', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer' }}>
+                          {t.deleteEvt}
+                        </button>
+                      )}
+                    </div>
 
                     {adminSelectedEventId && (
                       <>
+                        {/* 실시간 통계 현황판 */}
+                        <div style={{ padding: '15px', background: availableSeats >= 0 ? '#ecfdf5' : '#fef2f2', borderRadius: '8px', marginBottom: '20px', border: `1px solid ${availableSeats >= 0 ? '#10b981' : '#ef4444'}`, display: 'flex', justifyContent: 'space-around', fontWeight: 'bold', fontSize: '13px' }}>
+                          <div style={{ textAlign: 'center' }}><span style={{ display: 'block', color: '#64748b', fontSize: '11px', marginBottom: '2px' }}>{t.statsTxt}</span>{totalRiders}</div>
+                          <div style={{ textAlign: 'center' }}><span style={{ display: 'block', color: '#64748b', fontSize: '11px', marginBottom: '2px' }}>{t.statsSeats}</span>{totalSeats}</div>
+                          <div style={{ textAlign: 'center', color: availableSeats >= 0 ? '#059669' : '#dc2626' }}><span style={{ display: 'block', fontSize: '11px', marginBottom: '2px' }}>{availableSeats >= 0 ? t.statsAvail : t.statsShort}</span>{Math.abs(availableSeats)}</div>
+                        </div>
+
                         <div style={{ display: 'flex', background: '#e4e4e7', padding: '4px', borderRadius: '10px', marginBottom: '20px' }}>
                           <button onClick={() => setRideDirection('to')} style={{ flex: 1, padding: '10px', borderRadius: '8px', border: 'none', background: rideDirection === 'to' ? '#fff' : 'transparent', fontWeight: 'bold', cursor: 'pointer' }}>{t.toEvt}</button>
                           <button onClick={() => setRideDirection('from')} style={{ flex: 1, padding: '10px', borderRadius: '8px', border: 'none', background: rideDirection === 'from' ? '#fff' : 'transparent', fontWeight: 'bold', cursor: 'pointer' }}>{t.fromEvt}</button>
@@ -719,7 +728,15 @@ export default function Home() {
                                   <div style={{ fontWeight: 'bold' }}>{driver.isVan ? <span style={{ color: '#2563eb' }}>[Van] </span> : 'Car: '}{driver.name}</div>
                                   <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                                     <button onClick={() => openNavigation(driver.id)} style={{ padding: '6px 10px', background: '#18181b', color: '#fff', border: 'none', borderRadius: '6px', fontSize: '12px', fontWeight: 'bold', cursor: 'pointer' }}>{t.mapNav}</button>
-                                    <span style={{ color: isFull ? '#ef4444' : '#166534', fontWeight: 'bold' }}>{passengers.length} / {driver.capacity}</span>
+                                    
+                                    {/* 차량 인원 플러스 마이너스 버튼 추가 */}
+                                    <div style={{ display: 'flex', alignItems: 'center', background: '#f1f5f9', borderRadius: '6px', overflow: 'hidden', border: '1px solid #cbd5e1' }}>
+                                      <button onClick={() => adjustCapacity(driver.id, driver.capacity, -1)} style={{ padding: '4px 8px', border: 'none', background: '#e2e8f0', cursor: 'pointer', fontWeight: 'bold' }}>-</button>
+                                      <span style={{ padding: '0 8px', fontSize: '12px', fontWeight: 'bold' }}>{driver.capacity}</span>
+                                      <button onClick={() => adjustCapacity(driver.id, driver.capacity, 1)} style={{ padding: '4px 8px', border: 'none', background: '#e2e8f0', cursor: 'pointer', fontWeight: 'bold' }}>+</button>
+                                    </div>
+                                    
+                                    <span style={{ color: isFull ? '#ef4444' : '#166534', fontWeight: 'bold', fontSize: '13px' }}>{passengers.length} / {driver.capacity}</span>
                                   </div>
                                 </div>
                                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', minHeight: '40px', background: '#f8fafc', padding: '10px', borderRadius: '8px' }}>
@@ -744,7 +761,7 @@ export default function Home() {
           <button onClick={() => setCurrentTab('calendar')} style={{ flex: 1, padding: '15px 0', background: 'none', border: 'none', color: currentTab === 'calendar' ? '#18181b' : '#a1a1aa', fontWeight: currentTab === 'calendar' ? 'bold' : 'normal', fontSize: '13px', cursor: 'pointer' }}>{t.navCal}</button>
           <button onClick={() => setCurrentTab('profile')} style={{ flex: 1, padding: '15px 0', background: 'none', border: 'none', color: currentTab === 'profile' ? '#18181b' : '#a1a1aa', fontWeight: currentTab === 'profile' ? 'bold' : 'normal', fontSize: '13px', cursor: 'pointer' }}>{t.navProf}</button>
           <button onClick={() => setCurrentTab('guide')} style={{ flex: 1, padding: '15px 0', background: 'none', border: 'none', color: currentTab === 'guide' ? '#18181b' : '#a1a1aa', fontWeight: currentTab === 'guide' ? 'bold' : 'normal', fontSize: '13px', cursor: 'pointer' }}>{t.navGuide}</button>
-          {profile.isAdmin && <button onClick={() => setCurrentTab('admin')} style={{ flex: 1, padding: '15px 0', background: 'none', border: 'none', color: currentTab === 'admin' ? '#18181b' : '#a1a1aa', fontWeight: currentTab === 'admin' ? 'bold' : 'normal', fontSize: '13px', cursor: 'pointer' }}>{t.navAdmin}</button>}
+          {canManage && <button onClick={() => setCurrentTab('admin')} style={{ flex: 1, padding: '15px 0', background: 'none', border: 'none', color: currentTab === 'admin' ? '#18181b' : '#a1a1aa', fontWeight: currentTab === 'admin' ? 'bold' : 'normal', fontSize: '13px', cursor: 'pointer' }}>{t.navAdmin}</button>}
         </nav>
       )}
     </div>
