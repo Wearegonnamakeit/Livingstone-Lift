@@ -64,7 +64,8 @@ const text = {
     pushEnabled: "[ON] Push Notifications (Disable)", pushDisabled: "Enable Push Notifications", disablePushConfirm: "Do you want to disable push notifications?",
     deleteEvt: "Delete Event", confirmDeleteEvt: "Are you sure you want to delete this event?",
     statsTxt: "Total Riders", statsSeats: "Total Seats", statsAvail: "Seats Available", statsShort: "Seat Shortage",
-    addGuestBtn: "Add Offline User", proxyApplyTitle: "Proxy Apply (Search)", searchPlaceholder: "Search by name...", addBtn: "Add", noResult: "No results found."
+    addGuestBtn: "Add Offline User", proxyApplyTitle: "Proxy Apply (Search)", searchPlaceholder: "Search by name...", addBtn: "Add", noResult: "No results found.",
+    applyModalTitle: "Application", confirmApply: "Confirm Apply", close: "Close"
   },
   ko: {
     appTitle: "Livingstone Lift", loginReq: "앱을 사용하려면 로그인해 주세요.", loginBtn: "구글 계정으로 시작하기",
@@ -87,7 +88,8 @@ const text = {
     pushEnabled: "[ON] 푸시 알림 켜짐 (끄기)", pushDisabled: "푸시 알림 켜기", disablePushConfirm: "푸시 알림을 끄시겠습니까?",
     deleteEvt: "일정 삭제", confirmDeleteEvt: "정말로 이 일정을 삭제하시겠습니까? 신청 내역도 모두 삭제됩니다.",
     statsTxt: "신청 인원", statsSeats: "전체 좌석", statsAvail: "남은 자리", statsShort: "자리 부족",
-    addGuestBtn: "수동 교인 추가", proxyApplyTitle: "대리 신청 (이름 검색)", searchPlaceholder: "이름을 입력하세요...", addBtn: "추가", noResult: "검색 결과가 없습니다."
+    addGuestBtn: "수동 교인 추가", proxyApplyTitle: "대리 신청 (이름 검색)", searchPlaceholder: "이름을 입력하세요...", addBtn: "추가", noResult: "검색 결과가 없습니다.",
+    applyModalTitle: "탑승 신청", confirmApply: "신청 완료", close: "닫기"
   }
 };
 
@@ -133,6 +135,29 @@ export default function Home() {
 
   const [customMsg, setCustomMsg] = useState<Record<string, string>>({});
   const prevAppsRef = useRef<Record<string, Application>>({});
+
+  const [applyEvent, setApplyEvent] = useState<ChurchEvent | null>(null);
+  const [applyData, setApplyData] = useState({ rideType: '', capacity: '', isVan: false });
+
+  // 팝업 열기 (내 기본 프로필 값을 미리 채워줌)
+  const openApplyModal = (event: ChurchEvent) => {
+    if (!profile) return;
+    setApplyData({ rideType: profile.rideType, capacity: profile.capacity || '4', isVan: profile.isVan || false });
+    setApplyEvent(event);
+  };
+
+  // 팝업에서 신청 확정
+  const confirmApply = async () => {
+    if (!user || !profile || !applyEvent) return;
+    try {
+      await setDoc(doc(db, 'applications', `${applyEvent.id}_${user.uid}`), {
+        eventId: applyEvent.id, userId: user.uid, name: profile.name, phone: profile.phone, address: profile.address,
+        rideType: applyData.rideType, capacity: applyData.capacity, role: applyData.rideType.includes('Drive') ? 'driver' : 'rider',
+        carIdTo: null, carIdFrom: null, statusTo: '', statusFrom: '', isVan: applyData.isVan, appliedAt: serverTimestamp()
+      });
+      setApplyEvent(null);
+    } catch (error) { console.error(error); }
+  };
 
   // 대리 신청 검색창 및 수동 등록 관련 상태
   const [searchQuery, setSearchQuery] = useState('');
@@ -355,17 +380,6 @@ export default function Home() {
         await fetchEvents();
       } catch (error) { console.error(error); }
     }
-  };
-
-  const handleApply = async (event: ChurchEvent) => {
-    if (!user || !profile) return;
-    try {
-      await setDoc(doc(db, 'applications', `${event.id}_${user.uid}`), {
-        eventId: event.id, userId: user.uid, name: profile.name, phone: profile.phone, address: profile.address,
-        rideType: profile.rideType, capacity: profile.capacity, role: profile.rideType.includes('Drive') ? 'driver' : 'rider',
-        carIdTo: null, carIdFrom: null, statusTo: '', statusFrom: '', isVan: profile.isVan || false, appliedAt: serverTimestamp()
-      });
-    } catch (error) { console.error(error); }
   };
 
   // 목사님의 검색 기반 대리 신청
@@ -660,7 +674,7 @@ export default function Home() {
 
                           <div style={{ display: 'flex', gap: '10px' }}>
                             {!userApp ? (
-                              <button onClick={() => handleApply(event)} style={{ flex: 1, padding: '12px', background: '#2563eb', color: '#fff', border: 'none', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer' }}>{t.applyBtn}</button>
+                              <button onClick={() => openApplyModal(event)} style={{ flex: 1, padding: '12px', background: '#2563eb', color: '#fff', border: 'none', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer' }}>{t.applyBtn}</button>
                             ) : (
                               <>
                                 <div style={{ flex: 1, padding: '12px', background: '#10b981', color: '#fff', textAlign: 'center', borderRadius: '8px', fontWeight: 'bold' }}>{t.appliedBtn}</div>
@@ -888,6 +902,40 @@ export default function Home() {
             )}
           </>
         )}
+        {/* ========================================== */}
+        {/* ⭐ 여기에 신청 팝업 UI 코드를 추가하세요! ⭐ */}
+        {applyEvent && (
+          <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '20px' }}>
+            <div style={{ background: '#fff', padding: '25px', borderRadius: '12px', width: '100%', maxWidth: '350px' }}>
+              <h3 style={{ margin: '0 0 15px 0', fontSize: '16px' }}>{applyEvent.title} {t.applyModalTitle}</h3>
+              
+              <div style={{ marginBottom: '15px' }}>
+                <label style={{ display: 'block', fontSize: '13px', fontWeight: 'bold', marginBottom: '5px' }}>이번 주 탑승 형태</label>
+                <select value={applyData.rideType} onChange={e => setApplyData({...applyData, rideType: e.target.value})} style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #ccc' }}>
+                  <option value="Need a Ride">{t.needRide}</option>
+                  <option value="Can Drive">{t.canDrive}</option>
+                  <option value="Drive Self">{t.driveSelf}</option>
+                </select>
+              </div>
+
+              {applyData.rideType === 'Can Drive' && (
+                <>
+                  <div style={{ marginBottom: '15px' }}><label style={{ display: 'block', fontSize: '13px', fontWeight: 'bold', marginBottom: '5px' }}>{t.capacity}</label><input type="number" value={applyData.capacity} onChange={e => setApplyData({...applyData, capacity: e.target.value})} style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #ccc' }} /></div>
+                  <div style={{ marginBottom: '15px', display: 'flex', gap: '10px' }}>
+                    <input type="checkbox" id="applyVan" checked={applyData.isVan} onChange={e => setApplyData({...applyData, isVan: e.target.checked})} />
+                    <label htmlFor="applyVan" style={{ fontSize: '13px', fontWeight: 'bold' }}>{t.van}</label>
+                  </div>
+                </>
+              )}
+
+              <div style={{ display: 'flex', gap: '10px' }}>
+                <button onClick={confirmApply} style={{ flex: 1, padding: '12px', background: '#3b82f6', color: '#fff', border: 'none', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer' }}>{t.confirmApply}</button>
+                <button onClick={() => setApplyEvent(null)} style={{ flex: 1, padding: '12px', background: '#f4f4f5', color: '#ef4444', border: 'none', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer' }}>{t.close}</button>
+              </div>
+            </div>
+          </div>
+        )}
+        {/* ========================================== */}
       </main>
 
       {/* -------------------- BOTTOM NAVIGATION (핵심 기능 노출) -------------------- */}
