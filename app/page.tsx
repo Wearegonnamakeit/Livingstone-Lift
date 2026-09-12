@@ -23,6 +23,7 @@ interface ChurchEvent {
   date: string;
   destination: string;
   type: 'regular' | 'special';
+  isLocked?: boolean;
 }
 
 interface Application {
@@ -65,8 +66,9 @@ const text = {
     deleteEvt: "Delete Event", confirmDeleteEvt: "Are you sure you want to delete this event?",
     statsTxt: "Total Riders", statsSeats: "Total Seats", statsAvail: "Seats Available", statsShort: "Seat Shortage",
     addGuestBtn: "Add Offline User", proxyApplyTitle: "Proxy Apply (Search)", searchPlaceholder: "Search by name...", addBtn: "Add", noResult: "No results found.",
-    applyModalTitle: "Application", confirmApply: "Confirm Apply", close: "Close", autoGenBtn: "Auto-Generate 1 Month (Fri/Sun)", autoGenConfirm: "Generate regular Friday/Sunday events for the next 30 days?", autoGenDone: "Events generated!",
-
+    applyModalTitle: "Application", confirmApply: "Confirm Apply", close: "Close",
+    autoGenBtn: "Auto-Generate 1 Month (Fri/Sun)", autoGenConfirm: "Generate regular Friday/Sunday events for the next 30 days?", autoGenDone: "Events generated!",
+    lockEvt: "Lock Event", unlockEvt: "Unlock Event", evtLocked: "Event Closed", sortByAddr: "📍 Sort by Address", sortByName: "🔤 Sort by Name"
   },
   ko: {
     appTitle: "Livingstone Lift", loginReq: "앱을 사용하려면 로그인해 주세요.", loginBtn: "구글 계정으로 시작하기",
@@ -90,7 +92,9 @@ const text = {
     deleteEvt: "일정 삭제", confirmDeleteEvt: "정말로 이 일정을 삭제하시겠습니까? 신청 내역도 모두 삭제됩니다.",
     statsTxt: "신청 인원", statsSeats: "전체 좌석", statsAvail: "남은 자리", statsShort: "자리 부족",
     addGuestBtn: "수동 교인 추가", proxyApplyTitle: "대리 신청 (이름 검색)", searchPlaceholder: "이름을 입력하세요...", addBtn: "추가", noResult: "검색 결과가 없습니다.",
-    applyModalTitle: "탑승 신청", confirmApply: "신청 완료", close: "닫기", autoGenBtn: "1달치 정기예배 자동 생성 (금/주일)", autoGenConfirm: "앞으로 30일간의 금요일, 일요일 정기 예배 일정을 생성하시겠습니까?", autoGenDone: "생성 완료되었습니다."
+    applyModalTitle: "탑승 신청", confirmApply: "신청 완료", close: "닫기",
+    autoGenBtn: "1달치 정기예배 자동 생성 (금/주일)", autoGenConfirm: "앞으로 30일간의 금요일, 일요일 정기 예배 일정을 생성하시겠습니까?", autoGenDone: "생성 완료되었습니다.",
+    lockEvt: "일정 마감", unlockEvt: "마감 해제", evtLocked: "마감된 일정입니다", sortByAddr: "📍 주소별 정렬", sortByName: "🔤 이름순 정렬"
   }
 };
 
@@ -137,33 +141,14 @@ export default function Home() {
   const [customMsg, setCustomMsg] = useState<Record<string, string>>({});
   const prevAppsRef = useRef<Record<string, Application>>({});
 
-  const [applyEvent, setApplyEvent] = useState<ChurchEvent | null>(null);
-  const [applyData, setApplyData] = useState({ rideType: '', capacity: '', isVan: false });
-
-  // 팝업 열기 (내 기본 프로필 값을 미리 채워줌)
-  const openApplyModal = (event: ChurchEvent) => {
-    if (!profile) return;
-    setApplyData({ rideType: profile.rideType, capacity: profile.capacity || '4', isVan: profile.isVan || false });
-    setApplyEvent(event);
-  };
-
-  // 팝업에서 신청 확정
-  const confirmApply = async () => {
-    if (!user || !profile || !applyEvent) return;
-    try {
-      await setDoc(doc(db, 'applications', `${applyEvent.id}_${user.uid}`), {
-        eventId: applyEvent.id, userId: user.uid, name: profile.name, phone: profile.phone, address: profile.address,
-        rideType: applyData.rideType, capacity: applyData.capacity, role: applyData.rideType.includes('Drive') ? 'driver' : 'rider',
-        carIdTo: null, carIdFrom: null, statusTo: '', statusFrom: '', isVan: applyData.isVan, appliedAt: serverTimestamp()
-      });
-      setApplyEvent(null);
-    } catch (error) { console.error(error); }
-  };
-
-  // 대리 신청 검색창 및 수동 등록 관련 상태
   const [searchQuery, setSearchQuery] = useState('');
   const [isAddingGuest, setIsAddingGuest] = useState(false);
   const [guestData, setGuestData] = useState({ name: '', phone: '', address: '', rideType: 'Need a Ride', capacity: '4', isVan: false });
+
+  // 팝업 신청 및 정렬 상태 추가
+  const [applyEvent, setApplyEvent] = useState<ChurchEvent | null>(null);
+  const [applyData, setApplyData] = useState({ rideType: '', capacity: '', isVan: false });
+  const [sortByAddress, setSortByAddress] = useState(false);
 
   const canManage = profile?.isAdmin || profile?.rideType === 'Can Drive';
 
@@ -321,7 +306,6 @@ export default function Home() {
     return () => { if (unsubAdmin) unsubAdmin(); };
   }, [adminSelectedEventId]);
 
-  // 대리 신청 시 인원 검색을 위해 관리자라면 assign 탭에서도 교인 명단 불러오기
   useEffect(() => { 
     if (profile?.isAdmin && (currentTab === 'users' || currentTab === 'assign')) {
       fetchAllUsers(); 
@@ -342,17 +326,11 @@ export default function Home() {
     } finally { setSaving(false); }
   };
 
-  // 관리자의 수동 교인 등록 (오프라인 교인)
   const handleAddGuest = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!profile?.isAdmin) return;
     try {
-      await addDoc(collection(db, 'users'), {
-        ...guestData,
-        isAdmin: false,
-        isGuest: true,
-        fcmToken: ''
-      });
+      await addDoc(collection(db, 'users'), { ...guestData, isAdmin: false, isGuest: true, fcmToken: '' });
       setIsAddingGuest(false);
       setGuestData({ name: '', phone: '', address: '', rideType: 'Need a Ride', capacity: '4', isVan: false });
       fetchAllUsers();
@@ -378,20 +356,17 @@ export default function Home() {
       for (let i = 0; i <= 30; i++) {
         const targetDate = new Date(today.getFullYear(), today.getMonth(), today.getDate() + i);
         const day = targetDate.getDay();
-        
-        // 5: 금요일, 0: 일요일
         if (day === 5 || day === 0) { 
           const dateStr = `${targetDate.getFullYear()}-${String(targetDate.getMonth() + 1).padStart(2, '0')}-${String(targetDate.getDate()).padStart(2, '0')}`;
-          
-          // 이미 해당 날짜에 정기 일정이 있는지 중복 검사
           const exists = events.some(e => e.date === dateStr && e.type === 'regular');
           if (!exists) {
             const isFriday = day === 5;
             await addDoc(collection(db, 'events'), {
-              title: isFriday ? '금요예배 (오후 6시)' : '주일예배 (오후 1시)',
+              title: isFriday ? '금요예배 / Friday Worship (6 PM)' : '주일예배 / Sunday Worship (1 PM)',
               date: dateStr,
-              destination: isFriday ? 'MU 옆 서클' : '체이즌 뮤지엄 앞',
-              type: 'regular'
+              destination: isFriday ? 'MU 옆 서클 / MU Circle' : '체이즌 뮤지엄 앞 / Chazen Museum',
+              type: 'regular',
+              isLocked: false
             });
           }
         }
@@ -399,11 +374,7 @@ export default function Home() {
       await fetchEvents();
       alert(t.autoGenDone);
       setCurrentTab('calendar');
-    } catch (error) { 
-      console.error(error); 
-    } finally { 
-      setCreatingEvent(false); 
-    }
+    } catch (error) { console.error(error); } finally { setCreatingEvent(false); }
   };
 
   const handleDeleteEvent = async (eventId: string) => {
@@ -419,7 +390,34 @@ export default function Home() {
     }
   };
 
-  // 목사님의 검색 기반 대리 신청
+  // 일정 마감/해제 토글 함수
+  const handleToggleLock = async (eventId: string, currentLockStatus: boolean) => {
+    try {
+      await updateDoc(doc(db, 'events', eventId), { isLocked: !currentLockStatus });
+      await fetchEvents();
+    } catch (error) { console.error(error); }
+  };
+
+  // 팝업 열기 함수
+  const openApplyModal = (event: ChurchEvent) => {
+    if (!profile) return;
+    setApplyData({ rideType: profile.rideType, capacity: profile.capacity || '4', isVan: profile.isVan || false });
+    setApplyEvent(event);
+  };
+
+  // 팝업 안에서 신청 확정 함수
+  const confirmApply = async () => {
+    if (!user || !profile || !applyEvent) return;
+    try {
+      await setDoc(doc(db, 'applications', `${applyEvent.id}_${user.uid}`), {
+        eventId: applyEvent.id, userId: user.uid, name: profile.name, phone: profile.phone, address: profile.address,
+        rideType: applyData.rideType, capacity: applyData.capacity, role: applyData.rideType.includes('Drive') ? 'driver' : 'rider',
+        carIdTo: null, carIdFrom: null, statusTo: '', statusFrom: '', isVan: applyData.isVan, appliedAt: serverTimestamp()
+      });
+      setApplyEvent(null);
+    } catch (error) { console.error(error); }
+  };
+
   const handleProxyApply = async (guestUser: UserProfile & {id: string}) => {
     if (!adminSelectedEventId || !profile?.isAdmin) return;
     try {
@@ -428,7 +426,7 @@ export default function Home() {
         rideType: guestUser.rideType, capacity: guestUser.capacity, role: guestUser.rideType.includes('Drive') ? 'driver' : 'rider',
         carIdTo: null, carIdFrom: null, statusTo: '', statusFrom: '', isVan: guestUser.isVan || false, appliedAt: serverTimestamp()
       });
-      setSearchQuery(''); // 신청 후 검색창 초기화
+      setSearchQuery('');
       alert(`${guestUser.name}` + (lang === 'ko' ? '님이 대기 명단에 추가되었습니다.' : ' has been added to the waiting list.'));
     } catch (error) { console.error(error); }
   };
@@ -516,11 +514,20 @@ export default function Home() {
   const drivers = eventAttendees.filter(a => a.role === 'driver');
   const riders = eventAttendees.filter(a => a.role === 'rider');
   const unassignedRiders = riders.filter(r => rideDirection === 'to' ? r.carIdTo === null : r.carIdFrom === null);
+  
+  // 주소별 정렬이 적용된 대기 명단
+  const sortedUnassignedRiders = [...unassignedRiders].sort((a, b) => {
+    if (sortByAddress) {
+      return (a.address || '').localeCompare(b.address || '');
+    }
+    return (a.name || '').localeCompare(b.name || '');
+  });
 
   const hasPushEnabled = !!profile?.fcmToken;
   const totalRiders = riders.length;
   const totalSeats = drivers.reduce((sum, d) => sum + parseInt(d.capacity || '4'), 0);
   const availableSeats = totalSeats - totalRiders;
+  const currentAdminEvent = events.find(e => e.id === adminSelectedEventId);
 
   return (
     <div style={{ width: '100%', maxWidth: '480px', margin: '0 auto', background: '#f4f4f5', minHeight: '100vh', paddingBottom: '80px', fontFamily: 'sans-serif' }}>
@@ -618,8 +625,12 @@ export default function Home() {
                       return (
                         <div key={event.id} style={{ background: '#fff', padding: '20px', borderRadius: '16px', marginBottom: '10px' }}>
                           <span style={{ fontSize: '12px', background: event.type === 'regular' ? '#dbeafe' : '#fce7f3', color: event.type === 'regular' ? '#1d4ed8' : '#be185d', padding: '5px 10px', borderRadius: '12px', fontWeight: 'bold' }}>{event.type === 'regular' ? t.regular : t.special}</span>
+                          {/* 마감 뱃지 표시 */}
+                          {event.isLocked && <span style={{ fontSize: '11px', background: '#fef3c7', color: '#d97706', padding: '5px 10px', borderRadius: '12px', fontWeight: 'bold', marginLeft: '5px' }}>{t.evtLocked}</span>}
+                          
                           <h4 style={{ margin: '12px 0', fontSize: '18px' }}>{event.title}</h4>
                           
+                          {/* 운전자 양방향 화면 */}
                           {userApp?.role === 'driver' && (
                             <div style={{ marginBottom: '15px', background: '#f8fafc', padding: '15px', borderRadius: '8px' }}>
                               <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '15px' }}>
@@ -674,6 +685,7 @@ export default function Home() {
                             </div>
                           )}
 
+                          {/* 탑승자 양방향 화면 */}
                           {userApp?.role === 'rider' && (
                             <div style={{ background: '#f8fafc', padding: '15px', borderRadius: '8px', marginBottom: '15px' }}>
                               <h5 style={{ margin: '0 0 10px 0', fontSize: '14px' }}>{t.myAssignment}</h5>
@@ -709,16 +721,21 @@ export default function Home() {
                             </div>
                           )}
 
-                          <div style={{ display: 'flex', gap: '10px' }}>
-                            {!userApp ? (
-                              <button onClick={() => openApplyModal(event)} style={{ flex: 1, padding: '12px', background: '#2563eb', color: '#fff', border: 'none', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer' }}>{t.applyBtn}</button>
-                            ) : (
-                              <>
-                                <div style={{ flex: 1, padding: '12px', background: '#10b981', color: '#fff', textAlign: 'center', borderRadius: '8px', fontWeight: 'bold' }}>{t.appliedBtn}</div>
-                                <button onClick={() => handleCancelApplication(event.id)} style={{ flex: 1, padding: '12px', background: '#f4f4f5', color: '#ef4444', border: '1px solid #fecaca', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer' }}>{t.cancelBtn}</button>
-                              </>
-                            )}
-                          </div>
+                          {/* 신청 및 취소 버튼 (마감 상태에 따라 변경) */}
+                          {event.isLocked ? (
+                            <div style={{ width: '100%', padding: '12px', background: '#f1f5f9', color: '#64748b', textAlign: 'center', borderRadius: '8px', fontWeight: 'bold' }}>{t.evtLocked}</div>
+                          ) : (
+                            <div style={{ display: 'flex', gap: '10px' }}>
+                              {!userApp ? (
+                                <button onClick={() => openApplyModal(event)} style={{ flex: 1, padding: '12px', background: '#2563eb', color: '#fff', border: 'none', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer' }}>{t.applyBtn}</button>
+                              ) : (
+                                <>
+                                  <div style={{ flex: 1, padding: '12px', background: '#10b981', color: '#fff', textAlign: 'center', borderRadius: '8px', fontWeight: 'bold' }}>{t.appliedBtn}</div>
+                                  <button onClick={() => handleCancelApplication(event.id)} style={{ flex: 1, padding: '12px', background: '#f4f4f5', color: '#ef4444', border: '1px solid #fecaca', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer' }}>{t.cancelBtn}</button>
+                                </>
+                              )}
+                            </div>
+                          )}
                         </div>
                       );
                     })}
@@ -738,6 +755,7 @@ export default function Home() {
                   <div style={{ marginBottom: '15px' }}><label style={{ display: 'block', fontSize: '13px', fontWeight: 'bold', marginBottom: '5px' }}>{t.destL}</label><input required value={newEvent.destination} onChange={e => setNewEvent({...newEvent, destination: e.target.value})} style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #ccc' }} /></div>
                   <button type="submit" style={{ width: '100%', padding: '12px', background: '#3b82f6', color: 'white', borderRadius: '8px', fontWeight: 'bold', border: 'none', cursor: 'pointer' }}>{creatingEvent ? t.creatingBtn : t.createBtn}</button>
                 </form>
+
                 <hr style={{ margin: '20px 0', border: 'none', borderTop: '1px solid #e4e4e7' }} />
                 <button onClick={handleAutoGenerateEvents} disabled={creatingEvent} style={{ width: '100%', padding: '12px', background: '#10b981', color: 'white', borderRadius: '8px', fontWeight: 'bold', border: 'none', cursor: 'pointer' }}>
                   {creatingEvent ? t.creatingBtn : t.autoGenBtn}
@@ -745,17 +763,23 @@ export default function Home() {
               </div>
             )}
 
-            {/* -------------------- 3. ASSIGN TAB (관리자용 검색 대리신청 포함) -------------------- */}
+            {/* -------------------- 3. ASSIGN TAB (잠금 & 주소 정렬) -------------------- */}
             {currentTab === 'assign' && canManage && (
               <div>
                 <h2 style={{ margin: '0 0 20px 0', fontSize: '18px' }}>{t.adminAssign}</h2>
                 <div style={{ display: 'flex', gap: '10px', marginBottom: '15px' }}>
-                  <select value={adminSelectedEventId} onChange={e => setAdminSelectedEventId(e.target.value)} style={{ flex: 1, padding: '12px', borderRadius: '8px', border: '1px solid #ccc' }}>
+                  <select value={adminSelectedEventId} onChange={e => setAdminSelectedEventId(e.target.value)} style={{ flex: 1, padding: '12px', borderRadius: '8px', border: '1px solid #ccc', minWidth: '0' }}>
                     <option value="">{t.selectEvt}</option>
                     {events.map(ev => <option key={ev.id} value={ev.id}>{ev.date} - {ev.title}</option>)}
                   </select>
+                  {/* 일정 마감 및 삭제 버튼 */}
+                  {currentAdminEvent && (
+                    <button onClick={() => handleToggleLock(currentAdminEvent.id, !!currentAdminEvent.isLocked)} style={{ padding: '0 15px', background: currentAdminEvent.isLocked ? '#f59e0b' : '#10b981', color: '#fff', border: 'none', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer', whiteSpace: 'nowrap' }}>
+                      {currentAdminEvent.isLocked ? t.unlockEvt : t.lockEvt}
+                    </button>
+                  )}
                   {adminSelectedEventId && (
-                    <button onClick={() => handleDeleteEvent(adminSelectedEventId)} style={{ padding: '0 15px', background: '#ef4444', color: '#fff', border: 'none', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer' }}>
+                    <button onClick={() => handleDeleteEvent(adminSelectedEventId)} style={{ padding: '0 15px', background: '#ef4444', color: '#fff', border: 'none', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer', whiteSpace: 'nowrap' }}>
                       {t.deleteEvt}
                     </button>
                   )}
@@ -763,7 +787,6 @@ export default function Home() {
 
                 {adminSelectedEventId && (
                   <>
-                    {/* 관리자 전용 대리 신청 검색창 (운전자에겐 안 보임) */}
                     {profile.isAdmin && (
                       <div style={{ marginBottom: '20px', padding: '15px', background: '#f8fafc', borderRadius: '8px', border: '1px solid #cbd5e1' }}>
                         <h4 style={{ margin: '0 0 10px 0', fontSize: '14px', color: '#334155' }}>[+] {t.proxyApplyTitle}</h4>
@@ -806,10 +829,25 @@ export default function Home() {
                     </div>
 
                     <div onDragOver={(e) => { e.preventDefault(); setDragOverCarId('waiting'); }} onDrop={(e) => handleDrop(e, null)} style={{ background: dragOverCarId === 'waiting' ? '#f3f4f6' : '#fff', padding: '15px', borderRadius: '12px', border: '1px solid #e4e4e7', marginBottom: '20px', minHeight: '100px' }}>
-                      <h4 style={{ margin: '0 0 10px 0' }}>{t.waitList} ({unassignedRiders.length})</h4>
-                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-                        {unassignedRiders.map(r => <div key={r.id} draggable onDragStart={e => e.dataTransfer.setData('passengerId', r.id)} style={{ padding: '6px 12px', background: '#f8fafc', border: '1px solid #cbd5e1', borderRadius: '20px', fontSize: '13px', fontWeight: 'bold', cursor: 'grab' }}>{r.name}</div>)}
+                      
+                      {/* 대기 명단 헤더 및 주소 정렬 토글 버튼 */}
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                        <h4 style={{ margin: 0 }}>{t.waitList} ({unassignedRiders.length})</h4>
+                        <button onClick={() => setSortByAddress(!sortByAddress)} style={{ padding: '6px 10px', fontSize: '11px', fontWeight: 'bold', borderRadius: '6px', border: '1px solid #cbd5e1', background: '#f8fafc', cursor: 'pointer' }}>
+                          {sortByAddress ? t.sortByName : t.sortByAddr}
+                        </button>
                       </div>
+
+                      {/* 정렬이 적용된 대기 명단 렌더링 */}
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                        {sortedUnassignedRiders.map(r => (
+                          <div key={r.id} draggable onDragStart={e => e.dataTransfer.setData('passengerId', r.id)} style={{ padding: '8px 12px', background: '#f8fafc', border: '1px solid #cbd5e1', borderRadius: '12px', fontSize: '13px', fontWeight: 'bold', cursor: 'grab', textAlign: 'center' }}>
+                            <div>{r.name}</div>
+                            {sortByAddress && <div style={{ fontSize: '10px', color: '#64748b', fontWeight: 'normal', marginTop: '4px', maxWidth: '100px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.address}</div>}
+                          </div>
+                        ))}
+                      </div>
+
                     </div>
 
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
@@ -844,7 +882,7 @@ export default function Home() {
               </div>
             )}
 
-            {/* -------------------- 4. USERS TAB (목사님 전용 - 수동 추가 포함) -------------------- */}
+            {/* -------------------- 4. USERS TAB -------------------- */}
             {currentTab === 'users' && profile.isAdmin && (
               <div style={{ background: '#ffffff', padding: '15px', borderRadius: '12px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
@@ -896,7 +934,7 @@ export default function Home() {
               </div>
             )}
 
-            {/* -------------------- PROFILE TAB (헤더 이동) -------------------- */}
+            {/* -------------------- PROFILE TAB -------------------- */}
             {currentTab === 'profile' && (
               <div style={{ background: '#ffffff', padding: '25px', borderRadius: '12px' }}>
                 <h2 style={{ margin: '0 0 20px 0', fontSize: '18px' }}>{t.myProfile}</h2>
@@ -905,16 +943,8 @@ export default function Home() {
                   <p style={{ margin: '0 0 10px 0', fontSize: '14px' }}><strong>{t.phone}:</strong> {profile.phone}</p>
                   <p style={{ margin: '0 0 10px 0', fontSize: '14px' }}><strong>{t.address}:</strong> {profile.address}</p>
                   <p style={{ margin: '0 0 10px 0', fontSize: '14px' }}><strong>{t.rideType}:</strong> {profile.rideType}</p>
-                  
                   <div style={{ marginTop: '15px', paddingTop: '15px', borderTop: '1px solid #e2e8f0' }}>
-                    <button 
-                      onClick={togglePushNotification} 
-                      style={{ 
-                        width: '100%', padding: '10px', color: 'white', border: 'none', borderRadius: '6px', 
-                        fontSize: '13px', fontWeight: 'bold', cursor: 'pointer',
-                        background: hasPushEnabled ? '#10b981' : '#0284c7' 
-                      }}
-                    >
+                    <button onClick={togglePushNotification} style={{ width: '100%', padding: '10px', color: 'white', border: 'none', borderRadius: '6px', fontSize: '13px', fontWeight: 'bold', cursor: 'pointer', background: hasPushEnabled ? '#10b981' : '#0284c7' }}>
                       {hasPushEnabled ? t.pushEnabled : t.pushDisabled}
                     </button>
                   </div>
@@ -923,7 +953,7 @@ export default function Home() {
               </div>
             )}
             
-            {/* -------------------- GUIDE TAB (헤더 이동) -------------------- */}
+            {/* -------------------- GUIDE TAB -------------------- */}
             {currentTab === 'guide' && (
               <div style={{ background: '#ffffff', padding: '25px', borderRadius: '12px', border: '1px solid #e4e4e7' }}>
                 <h2 style={{ margin: '0 0 20px 0', fontSize: '18px' }}>{t.guideTitle}</h2>
@@ -941,45 +971,41 @@ export default function Home() {
                 </div>
               </div>
             )}
+            
+            {/* -------------------- 맞춤 신청 팝업 모달 -------------------- */}
+            {applyEvent && (
+              <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '20px' }}>
+                <div style={{ background: '#fff', padding: '25px', borderRadius: '12px', width: '100%', maxWidth: '350px' }}>
+                  <h3 style={{ margin: '0 0 15px 0', fontSize: '16px' }}>{applyEvent.title} {t.applyModalTitle}</h3>
+                  <div style={{ marginBottom: '15px' }}>
+                    <label style={{ display: 'block', fontSize: '13px', fontWeight: 'bold', marginBottom: '5px' }}>이번 주 탑승 형태</label>
+                    <select value={applyData.rideType} onChange={e => setApplyData({...applyData, rideType: e.target.value})} style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #ccc' }}>
+                      <option value="Need a Ride">{t.needRide}</option>
+                      <option value="Can Drive">{t.canDrive}</option>
+                      <option value="Drive Self">{t.driveSelf}</option>
+                    </select>
+                  </div>
+                  {applyData.rideType === 'Can Drive' && (
+                    <>
+                      <div style={{ marginBottom: '15px' }}><label style={{ display: 'block', fontSize: '13px', fontWeight: 'bold', marginBottom: '5px' }}>{t.capacity}</label><input type="number" value={applyData.capacity} onChange={e => setApplyData({...applyData, capacity: e.target.value})} style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #ccc' }} /></div>
+                      <div style={{ marginBottom: '15px', display: 'flex', gap: '10px' }}>
+                        <input type="checkbox" id="applyVan" checked={applyData.isVan} onChange={e => setApplyData({...applyData, isVan: e.target.checked})} />
+                        <label htmlFor="applyVan" style={{ fontSize: '13px', fontWeight: 'bold' }}>{t.van}</label>
+                      </div>
+                    </>
+                  )}
+                  <div style={{ display: 'flex', gap: '10px' }}>
+                    <button onClick={confirmApply} style={{ flex: 1, padding: '12px', background: '#3b82f6', color: '#fff', border: 'none', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer' }}>{t.confirmApply}</button>
+                    <button onClick={() => setApplyEvent(null)} style={{ flex: 1, padding: '12px', background: '#f4f4f5', color: '#ef4444', border: 'none', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer' }}>{t.close}</button>
+                  </div>
+                </div>
+              </div>
+            )}
           </>
         )}
-        {/* ========================================== */}
-        {/* ⭐ 여기에 신청 팝업 UI 코드를 추가하세요! ⭐ */}
-        {applyEvent && (
-          <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '20px' }}>
-            <div style={{ background: '#fff', padding: '25px', borderRadius: '12px', width: '100%', maxWidth: '350px' }}>
-              <h3 style={{ margin: '0 0 15px 0', fontSize: '16px' }}>{applyEvent.title} {t.applyModalTitle}</h3>
-              
-              <div style={{ marginBottom: '15px' }}>
-                <label style={{ display: 'block', fontSize: '13px', fontWeight: 'bold', marginBottom: '5px' }}>이번 주 탑승 형태</label>
-                <select value={applyData.rideType} onChange={e => setApplyData({...applyData, rideType: e.target.value})} style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #ccc' }}>
-                  <option value="Need a Ride">{t.needRide}</option>
-                  <option value="Can Drive">{t.canDrive}</option>
-                  <option value="Drive Self">{t.driveSelf}</option>
-                </select>
-              </div>
-
-              {applyData.rideType === 'Can Drive' && (
-                <>
-                  <div style={{ marginBottom: '15px' }}><label style={{ display: 'block', fontSize: '13px', fontWeight: 'bold', marginBottom: '5px' }}>{t.capacity}</label><input type="number" value={applyData.capacity} onChange={e => setApplyData({...applyData, capacity: e.target.value})} style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #ccc' }} /></div>
-                  <div style={{ marginBottom: '15px', display: 'flex', gap: '10px' }}>
-                    <input type="checkbox" id="applyVan" checked={applyData.isVan} onChange={e => setApplyData({...applyData, isVan: e.target.checked})} />
-                    <label htmlFor="applyVan" style={{ fontSize: '13px', fontWeight: 'bold' }}>{t.van}</label>
-                  </div>
-                </>
-              )}
-
-              <div style={{ display: 'flex', gap: '10px' }}>
-                <button onClick={confirmApply} style={{ flex: 1, padding: '12px', background: '#3b82f6', color: '#fff', border: 'none', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer' }}>{t.confirmApply}</button>
-                <button onClick={() => setApplyEvent(null)} style={{ flex: 1, padding: '12px', background: '#f4f4f5', color: '#ef4444', border: 'none', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer' }}>{t.close}</button>
-              </div>
-            </div>
-          </div>
-        )}
-        {/* ========================================== */}
       </main>
 
-      {/* -------------------- BOTTOM NAVIGATION (핵심 기능 노출) -------------------- */}
+      {/* -------------------- BOTTOM NAVIGATION -------------------- */}
       {user && profile && (
         <nav style={{ position: 'fixed', bottom: 0, left: '50%', transform: 'translateX(-50%)', width: '100%', maxWidth: '480px', background: '#ffffff', display: 'flex', borderTop: '1px solid #e4e4e7' }}>
           <button onClick={() => setCurrentTab('calendar')} style={{ flex: 1, padding: '15px 0', background: 'none', border: 'none', color: currentTab === 'calendar' ? '#18181b' : '#a1a1aa', fontWeight: currentTab === 'calendar' ? 'bold' : 'normal', fontSize: '13px', cursor: 'pointer' }}>{t.navCal}</button>
