@@ -65,7 +65,8 @@ const text = {
     deleteEvt: "Delete Event", confirmDeleteEvt: "Are you sure you want to delete this event?",
     statsTxt: "Total Riders", statsSeats: "Total Seats", statsAvail: "Seats Available", statsShort: "Seat Shortage",
     addGuestBtn: "Add Offline User", proxyApplyTitle: "Proxy Apply (Search)", searchPlaceholder: "Search by name...", addBtn: "Add", noResult: "No results found.",
-    applyModalTitle: "Application", confirmApply: "Confirm Apply", close: "Close"
+    applyModalTitle: "Application", confirmApply: "Confirm Apply", close: "Close", autoGenBtn: "Auto-Generate 1 Month (Fri/Sun)", autoGenConfirm: "Generate regular Friday/Sunday events for the next 30 days?", autoGenDone: "Events generated!",
+
   },
   ko: {
     appTitle: "Livingstone Lift", loginReq: "앱을 사용하려면 로그인해 주세요.", loginBtn: "구글 계정으로 시작하기",
@@ -89,7 +90,7 @@ const text = {
     deleteEvt: "일정 삭제", confirmDeleteEvt: "정말로 이 일정을 삭제하시겠습니까? 신청 내역도 모두 삭제됩니다.",
     statsTxt: "신청 인원", statsSeats: "전체 좌석", statsAvail: "남은 자리", statsShort: "자리 부족",
     addGuestBtn: "수동 교인 추가", proxyApplyTitle: "대리 신청 (이름 검색)", searchPlaceholder: "이름을 입력하세요...", addBtn: "추가", noResult: "검색 결과가 없습니다.",
-    applyModalTitle: "탑승 신청", confirmApply: "신청 완료", close: "닫기"
+    applyModalTitle: "탑승 신청", confirmApply: "신청 완료", close: "닫기", autoGenBtn: "1달치 정기예배 자동 생성 (금/주일)", autoGenConfirm: "앞으로 30일간의 금요일, 일요일 정기 예배 일정을 생성하시겠습니까?", autoGenDone: "생성 완료되었습니다."
   }
 };
 
@@ -367,6 +368,42 @@ export default function Home() {
       await fetchEvents();
       setCurrentTab('calendar');
     } finally { setCreatingEvent(false); }
+  };
+
+  const handleAutoGenerateEvents = async () => {
+    if (!confirm(t.autoGenConfirm)) return;
+    setCreatingEvent(true);
+    try {
+      const today = new Date();
+      for (let i = 0; i <= 30; i++) {
+        const targetDate = new Date(today.getFullYear(), today.getMonth(), today.getDate() + i);
+        const day = targetDate.getDay();
+        
+        // 5: 금요일, 0: 일요일
+        if (day === 5 || day === 0) { 
+          const dateStr = `${targetDate.getFullYear()}-${String(targetDate.getMonth() + 1).padStart(2, '0')}-${String(targetDate.getDate()).padStart(2, '0')}`;
+          
+          // 이미 해당 날짜에 정기 일정이 있는지 중복 검사
+          const exists = events.some(e => e.date === dateStr && e.type === 'regular');
+          if (!exists) {
+            const isFriday = day === 5;
+            await addDoc(collection(db, 'events'), {
+              title: isFriday ? '금요예배 (오후 6시)' : '주일예배 (오후 1시)',
+              date: dateStr,
+              destination: isFriday ? 'MU 옆 서클' : '체이즌 뮤지엄 앞',
+              type: 'regular'
+            });
+          }
+        }
+      }
+      await fetchEvents();
+      alert(t.autoGenDone);
+      setCurrentTab('calendar');
+    } catch (error) { 
+      console.error(error); 
+    } finally { 
+      setCreatingEvent(false); 
+    }
   };
 
   const handleDeleteEvent = async (eventId: string) => {
@@ -701,6 +738,10 @@ export default function Home() {
                   <div style={{ marginBottom: '15px' }}><label style={{ display: 'block', fontSize: '13px', fontWeight: 'bold', marginBottom: '5px' }}>{t.destL}</label><input required value={newEvent.destination} onChange={e => setNewEvent({...newEvent, destination: e.target.value})} style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #ccc' }} /></div>
                   <button type="submit" style={{ width: '100%', padding: '12px', background: '#3b82f6', color: 'white', borderRadius: '8px', fontWeight: 'bold', border: 'none', cursor: 'pointer' }}>{creatingEvent ? t.creatingBtn : t.createBtn}</button>
                 </form>
+                <hr style={{ margin: '20px 0', border: 'none', borderTop: '1px solid #e4e4e7' }} />
+                <button onClick={handleAutoGenerateEvents} disabled={creatingEvent} style={{ width: '100%', padding: '12px', background: '#10b981', color: 'white', borderRadius: '8px', fontWeight: 'bold', border: 'none', cursor: 'pointer' }}>
+                  {creatingEvent ? t.creatingBtn : t.autoGenBtn}
+                </button>
               </div>
             )}
 
