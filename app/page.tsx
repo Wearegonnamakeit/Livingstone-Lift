@@ -9,6 +9,7 @@ interface UserProfile {
   name: string;
   phone: string;
   address: string;
+  zone?: string;
   rideType: string;
   capacity: string;
   isAdmin: boolean;
@@ -33,6 +34,7 @@ interface Application {
   name: string;
   phone: string;
   address: string;
+  zone?: string;
   rideType: string;
   capacity: string;
   role: 'driver' | 'rider';
@@ -43,10 +45,10 @@ interface Application {
   isVan?: boolean;
 }
 
-const text = {
+const text: Record<string, any> = {
   en: {
     appTitle: "Livingstone Lift", loginReq: "Please log in to use the application.", loginBtn: "Sign in with Google",
-    createProfile: "Create Your Profile", name: "Name", phone: "Phone", address: "Address", rideType: "Ride Type", capacity: "Capacity (excl. driver)",
+    createProfile: "Create Your Profile", name: "Name", phone: "Phone", address: "Address (Detailed)", rideType: "Ride Type", capacity: "Capacity (excl. driver)",
     needRide: "Need a Ride", canDrive: "Can Drive", driveSelf: "Drive Self", van: "I occasionally drive the Church Van", save: "Save Profile", saving: "Saving...",
     myProfile: "My Profile", signOut: "Sign Out", prev: "Prev", next: "Next", scheduleTitle: "Schedule for Selected Date",
     regular: "Regular Worship", special: "Special Event", myAssignment: "My Assignment", driverTxt: "Driver", statusTxt: "Driver Status",
@@ -68,11 +70,18 @@ const text = {
     addGuestBtn: "Add Offline User", proxyApplyTitle: "Proxy Apply (Search)", searchPlaceholder: "Search by name...", addBtn: "Add", noResult: "No results found.",
     applyModalTitle: "Application", confirmApply: "Confirm Apply", close: "Close",
     autoGenBtn: "Auto-Generate 1 Month (Fri/Sun)", autoGenConfirm: "Generate regular Friday/Sunday events for the next 30 days?", autoGenDone: "Events generated!",
-    lockEvt: "Lock Event", unlockEvt: "Unlock Event", evtLocked: "Event Closed", sortByAddr: "📍 Sort by Address", sortByName: "🔤 Sort by Name"
+    lockEvt: "Lock Event", unlockEvt: "Unlock Event", evtLocked: "Event Closed", sortByAddr: "📍 Group by Zone", sortByName: "🔤 Sort by Name",
+    zoneL: "Residential Zone", 
+    zone1: "State St. / Downtown (Hub, Lucky, Cap Square, etc.)",
+    zone2: "The Nick / Southeast (Witte, Sellery, Kohl Center, etc.)",
+    zone3: "Union South / Regent (Engineering, Camp Randall, etc.)",
+    zone4: "Hilldale / Sheboygan (Hilldale Mall, West Side Apts)",
+    zone5: "Eagle Heights (University Houses, etc.)",
+    zone6: "Other (Any other areas)"
   },
   ko: {
     appTitle: "Livingstone Lift", loginReq: "앱을 사용하려면 로그인해 주세요.", loginBtn: "구글 계정으로 시작하기",
-    createProfile: "프로필 생성", name: "이름", phone: "연락처", address: "픽업 주소", rideType: "탑승 유형", capacity: "탑승 가능 인원(운전자 본인 제외)",
+    createProfile: "프로필 생성", name: "이름", phone: "연락처", address: "상세 주소", rideType: "탑승 유형", capacity: "탑승 가능 인원(운전자 본인 제외)",
     needRide: "라이드 필요", canDrive: "운전 가능", driveSelf: "개별 이동", van: "상황에 따라 교회 밴도 운전합니다", save: "프로필 저장", saving: "저장 중...",
     myProfile: "내 프로필", signOut: "로그아웃", prev: "이전", next: "다음", scheduleTitle: "선택된 날짜의 일정",
     regular: "정기 예배", special: "특별 행사", myAssignment: "내 탑승 정보", driverTxt: "운전자", statusTxt: "운전자 상태",
@@ -94,7 +103,14 @@ const text = {
     addGuestBtn: "수동 교인 추가", proxyApplyTitle: "대리 신청 (이름 검색)", searchPlaceholder: "이름을 입력하세요...", addBtn: "추가", noResult: "검색 결과가 없습니다.",
     applyModalTitle: "탑승 신청", confirmApply: "신청 완료", close: "닫기",
     autoGenBtn: "1달치 정기예배 자동 생성 (금/주일)", autoGenConfirm: "앞으로 30일간의 금요일, 일요일 정기 예배 일정을 생성하시겠습니까?", autoGenDone: "생성 완료되었습니다.",
-    lockEvt: "일정 마감", unlockEvt: "마감 해제", evtLocked: "마감된 일정입니다", sortByAddr: "📍 주소별 정렬", sortByName: "🔤 이름순 정렬"
+    lockEvt: "일정 마감", unlockEvt: "마감 해제", evtLocked: "마감된 일정입니다", sortByAddr: "📍 구역별 색깔 정렬", sortByName: "🔤 이름순 정렬",
+    zoneL: "거주 구역 (차량 배정용)", 
+    zone1: "State St. / Downtown (허브, 럭키, 캡스퀘어 등)",
+    zone2: "The Nick / Southeast (콜 센터, Witte, Sellery 등)",
+    zone3: "Union South / Regent (공대, 캠프 랜들 근처)",
+    zone4: "Hilldale / Sheboygan (힐데일 몰, 셔보이건 애비뉴 등)",
+    zone5: "Eagle Heights (이글 하이츠 가족 기숙사)",
+    zone6: "Other (그 외 기타 지역)"
   }
 };
 
@@ -102,6 +118,16 @@ const statusMap: Record<string, {en: string, ko: string}> = {
   'Waiting at pickup area': {en: 'Waiting at pickup area', ko: '탑승 구역 대기 중'},
   'Departed': {en: 'Departed', ko: '출발함'},
   'Arrived': {en: 'Arrived', ko: '도착함'},
+};
+
+// 거주 구역 색상 팔레트 (목사님이 시각적으로 배정하기 쉽게 지정)
+const zoneColors: Record<string, string> = {
+  'zone1': '#3b82f6', // 파란색 (State St.)
+  'zone2': '#8b5cf6', // 보라색 (The Nick)
+  'zone3': '#f59e0b', // 주황색 (Union South)
+  'zone4': '#10b981', // 초록색 (Hilldale)
+  'zone5': '#ef4444', // 빨간색 (Eagle Heights)
+  'zone6': '#64748b', // 회색 (Other)
 };
 
 export default function Home() {
@@ -117,11 +143,11 @@ export default function Home() {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   
   const [currentTab, setCurrentTab] = useState<'calendar' | 'profile' | 'guide' | 'create' | 'assign' | 'users'>('calendar');
-  
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
 
-  const [formData, setFormData] = useState({ name: '', phone: '', address: '', rideType: 'Need a Ride', capacity: '4', isVan: false });
+  // formData와 guestData에 zone 추가
+  const [formData, setFormData] = useState({ name: '', phone: '', address: '', zone: 'zone1', rideType: 'Need a Ride', capacity: '4', isVan: false });
   const [saving, setSaving] = useState(false);
 
   const [events, setEvents] = useState<ChurchEvent[]>([]);
@@ -143,9 +169,8 @@ export default function Home() {
 
   const [searchQuery, setSearchQuery] = useState('');
   const [isAddingGuest, setIsAddingGuest] = useState(false);
-  const [guestData, setGuestData] = useState({ name: '', phone: '', address: '', rideType: 'Need a Ride', capacity: '4', isVan: false });
+  const [guestData, setGuestData] = useState({ name: '', phone: '', address: '', zone: 'zone6', rideType: 'Need a Ride', capacity: '4', isVan: false });
 
-  // 팝업 신청 및 정렬 상태 추가
   const [applyEvent, setApplyEvent] = useState<ChurchEvent | null>(null);
   const [applyData, setApplyData] = useState({ rideType: '', capacity: '', isVan: false });
   const [sortByAddress, setSortByAddress] = useState(false);
@@ -273,7 +298,10 @@ export default function Home() {
       if (docSnap.exists()) {
         const data = docSnap.data() as UserProfile;
         setProfile(data);
-        setFormData({ name: data.name || '', phone: data.phone || '', address: data.address || '', rideType: data.rideType || 'Need a Ride', capacity: data.capacity || '4', isVan: data.isVan || false });
+        setFormData({ 
+          name: data.name || '', phone: data.phone || '', address: data.address || '', 
+          zone: data.zone || 'zone6', rideType: data.rideType || 'Need a Ride', capacity: data.capacity || '4', isVan: data.isVan || false 
+        });
       }
     } catch (error) { console.error(error); } finally { setLoading(false); }
   };
@@ -332,7 +360,7 @@ export default function Home() {
     try {
       await addDoc(collection(db, 'users'), { ...guestData, isAdmin: false, isGuest: true, fcmToken: '' });
       setIsAddingGuest(false);
-      setGuestData({ name: '', phone: '', address: '', rideType: 'Need a Ride', capacity: '4', isVan: false });
+      setGuestData({ name: '', phone: '', address: '', zone: 'zone6', rideType: 'Need a Ride', capacity: '4', isVan: false });
       fetchAllUsers();
       alert(lang === 'ko' ? '새 교인이 성공적으로 등록되었습니다.' : 'User added successfully.');
     } catch (error) { console.error(error); }
@@ -390,7 +418,6 @@ export default function Home() {
     }
   };
 
-  // 일정 마감/해제 토글 함수
   const handleToggleLock = async (eventId: string, currentLockStatus: boolean) => {
     try {
       await updateDoc(doc(db, 'events', eventId), { isLocked: !currentLockStatus });
@@ -398,19 +425,17 @@ export default function Home() {
     } catch (error) { console.error(error); }
   };
 
-  // 팝업 열기 함수
   const openApplyModal = (event: ChurchEvent) => {
     if (!profile) return;
     setApplyData({ rideType: profile.rideType, capacity: profile.capacity || '4', isVan: profile.isVan || false });
     setApplyEvent(event);
   };
 
-  // 팝업 안에서 신청 확정 함수
   const confirmApply = async () => {
     if (!user || !profile || !applyEvent) return;
     try {
       await setDoc(doc(db, 'applications', `${applyEvent.id}_${user.uid}`), {
-        eventId: applyEvent.id, userId: user.uid, name: profile.name, phone: profile.phone, address: profile.address,
+        eventId: applyEvent.id, userId: user.uid, name: profile.name, phone: profile.phone, address: profile.address, zone: profile.zone || 'zone6',
         rideType: applyData.rideType, capacity: applyData.capacity, role: applyData.rideType.includes('Drive') ? 'driver' : 'rider',
         carIdTo: null, carIdFrom: null, statusTo: '', statusFrom: '', isVan: applyData.isVan, appliedAt: serverTimestamp()
       });
@@ -422,7 +447,7 @@ export default function Home() {
     if (!adminSelectedEventId || !profile?.isAdmin) return;
     try {
       await setDoc(doc(db, 'applications', `${adminSelectedEventId}_${guestUser.id}`), {
-        eventId: adminSelectedEventId, userId: guestUser.id, name: guestUser.name, phone: guestUser.phone, address: guestUser.address,
+        eventId: adminSelectedEventId, userId: guestUser.id, name: guestUser.name, phone: guestUser.phone, address: guestUser.address, zone: guestUser.zone || 'zone6',
         rideType: guestUser.rideType, capacity: guestUser.capacity, role: guestUser.rideType.includes('Drive') ? 'driver' : 'rider',
         carIdTo: null, carIdFrom: null, statusTo: '', statusFrom: '', isVan: guestUser.isVan || false, appliedAt: serverTimestamp()
       });
@@ -515,10 +540,13 @@ export default function Home() {
   const riders = eventAttendees.filter(a => a.role === 'rider');
   const unassignedRiders = riders.filter(r => rideDirection === 'to' ? r.carIdTo === null : r.carIdFrom === null);
   
-  // 주소별 정렬이 적용된 대기 명단
+  // 주소 구역(Zone) 기반 정렬 로직
   const sortedUnassignedRiders = [...unassignedRiders].sort((a, b) => {
     if (sortByAddress) {
-      return (a.address || '').localeCompare(b.address || '');
+      const zA = a.zone || 'zone6';
+      const zB = b.zone || 'zone6';
+      if (zA !== zB) return zA.localeCompare(zB); // 구역별(Zone)로 먼저 정렬
+      return (a.address || '').localeCompare(b.address || ''); // 같은 구역이면 상세 주소 정렬
     }
     return (a.name || '').localeCompare(b.name || '');
   });
@@ -542,12 +570,8 @@ export default function Home() {
               <button onClick={() => setCurrentTab('guide')} style={{ padding: '6px 8px', background: '#e4e4e7', borderRadius: '6px', border: 'none', fontSize: '11px', fontWeight: 'bold', cursor: 'pointer' }}>{t.navGuide}</button>
             </>
           )}
-          <button onClick={handleRefresh} disabled={isRefreshing} style={{ padding: '6px 8px', background: '#e4e4e7', borderRadius: '6px', border: 'none', fontSize: '11px', fontWeight: 'bold', cursor: 'pointer', opacity: isRefreshing ? 0.5 : 1 }}>
-            ↻
-          </button>
-          <button onClick={() => setLang(lang === 'ko' ? 'en' : 'ko')} style={{ padding: '6px 8px', background: '#e4e4e7', borderRadius: '6px', border: 'none', fontSize: '11px', fontWeight: 'bold', cursor: 'pointer' }}>
-            {lang === 'ko' ? 'EN' : 'KR'}
-          </button>
+          <button onClick={handleRefresh} disabled={isRefreshing} style={{ padding: '6px 8px', background: '#e4e4e7', borderRadius: '6px', border: 'none', fontSize: '11px', fontWeight: 'bold', cursor: 'pointer', opacity: isRefreshing ? 0.5 : 1 }}>↻</button>
+          <button onClick={() => setLang(lang === 'ko' ? 'en' : 'ko')} style={{ padding: '6px 8px', background: '#e4e4e7', borderRadius: '6px', border: 'none', fontSize: '11px', fontWeight: 'bold', cursor: 'pointer' }}>{lang === 'ko' ? 'EN' : 'KR'}</button>
         </div>
       </header>
 
@@ -555,17 +579,30 @@ export default function Home() {
         {!user ? (
           <div style={{ background: '#ffffff', padding: '30px', borderRadius: '12px', textAlign: 'center' }}>
             <p style={{ marginBottom: '20px' }}>{t.loginReq}</p>
-            <button onClick={handleLogin} style={{ width: '100%', padding: '14px', background: '#3b82f6', color: 'white', borderRadius: '8px', fontWeight: 'bold', border: 'none', cursor: 'pointer' }}>
-              {t.loginBtn}
-            </button>
+            <button onClick={handleLogin} style={{ width: '100%', padding: '14px', background: '#3b82f6', color: 'white', borderRadius: '8px', fontWeight: 'bold', border: 'none', cursor: 'pointer' }}>{t.loginBtn}</button>
           </div>
         ) : !profile ? (
+          // ==================== PROFILE CREATION ====================
           <div style={{ background: '#ffffff', padding: '25px', borderRadius: '12px' }}>
             <h2 style={{ margin: '0 0 15px 0', fontSize: '18px' }}>{t.createProfile}</h2>
             <form onSubmit={handleSaveProfile}>
               <div style={{ marginBottom: '15px' }}><label style={{ display: 'block', fontSize: '13px', fontWeight: 'bold', marginBottom: '5px' }}>{t.name}</label><input required value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #ccc' }} /></div>
               <div style={{ marginBottom: '15px' }}><label style={{ display: 'block', fontSize: '13px', fontWeight: 'bold', marginBottom: '5px' }}>{t.phone}</label><input required type="tel" value={formData.phone} onChange={e => setFormData({...formData, phone: e.target.value})} style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #ccc' }} /></div>
-              <div style={{ marginBottom: '15px' }}><label style={{ display: 'block', fontSize: '13px', fontWeight: 'bold', marginBottom: '5px' }}>{t.address}</label><input required value={formData.address} onChange={e => setFormData({...formData, address: e.target.value})} style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #ccc' }} /></div>
+              
+              {/* 거주 구역 선택 Dropdown */}
+              <div style={{ marginBottom: '15px' }}>
+                <label style={{ display: 'block', fontSize: '13px', fontWeight: 'bold', marginBottom: '5px' }}>{t.zoneL}</label>
+                <select value={formData.zone} onChange={e => setFormData({...formData, zone: e.target.value})} style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #ccc', fontSize: '13px', background: '#f8fafc' }}>
+                  <option value="zone1">{t.zone1}</option>
+                  <option value="zone2">{t.zone2}</option>
+                  <option value="zone3">{t.zone3}</option>
+                  <option value="zone4">{t.zone4}</option>
+                  <option value="zone5">{t.zone5}</option>
+                  <option value="zone6">{t.zone6}</option>
+                </select>
+              </div>
+
+              <div style={{ marginBottom: '15px' }}><label style={{ display: 'block', fontSize: '13px', fontWeight: 'bold', marginBottom: '5px' }}>{t.address}</label><input required value={formData.address} onChange={e => setFormData({...formData, address: e.target.value})} placeholder="Room 101, 123 Main St" style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #ccc' }} /></div>
               <div style={{ marginBottom: '15px' }}>
                 <label style={{ display: 'block', fontSize: '13px', fontWeight: 'bold', marginBottom: '5px' }}>{t.rideType}</label>
                 <select value={formData.rideType} onChange={e => setFormData({...formData, rideType: e.target.value})} style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #ccc' }}>
@@ -625,21 +662,16 @@ export default function Home() {
                       return (
                         <div key={event.id} style={{ background: '#fff', padding: '20px', borderRadius: '16px', marginBottom: '10px' }}>
                           <span style={{ fontSize: '12px', background: event.type === 'regular' ? '#dbeafe' : '#fce7f3', color: event.type === 'regular' ? '#1d4ed8' : '#be185d', padding: '5px 10px', borderRadius: '12px', fontWeight: 'bold' }}>{event.type === 'regular' ? t.regular : t.special}</span>
-                          {/* 마감 뱃지 표시 */}
                           {event.isLocked && <span style={{ fontSize: '11px', background: '#fef3c7', color: '#d97706', padding: '5px 10px', borderRadius: '12px', fontWeight: 'bold', marginLeft: '5px' }}>{t.evtLocked}</span>}
                           
                           <h4 style={{ margin: '12px 0', fontSize: '18px' }}>{event.title}</h4>
                           
-                          {/* 운전자 양방향 화면 */}
+                          {/* 운전자 화면 */}
                           {userApp?.role === 'driver' && (
                             <div style={{ marginBottom: '15px', background: '#f8fafc', padding: '15px', borderRadius: '8px' }}>
                               <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '15px' }}>
                                 <span style={{ fontSize: '13px', fontWeight: 'bold' }}>{t.vehicleType}:</span>
-                                <select 
-                                  value={userApp.isVan ? 'van' : 'car'} 
-                                  onChange={(e) => updateVehicle(userApp.id, e.target.value === 'van', e.target.value === 'van' ? '15' : profile.capacity)}
-                                  style={{ padding: '6px', borderRadius: '6px', border: '1px solid #ccc', fontSize: '13px' }}
-                                >
+                                <select value={userApp.isVan ? 'van' : 'car'} onChange={(e) => updateVehicle(userApp.id, e.target.value === 'van', e.target.value === 'van' ? '15' : profile.capacity)} style={{ padding: '6px', borderRadius: '6px', border: '1px solid #ccc', fontSize: '13px' }}>
                                   <option value="car">{t.personalCar} ({profile.capacity}{t.seats})</option>
                                   <option value="van">{t.churchVan}</option>
                                 </select>
@@ -685,7 +717,7 @@ export default function Home() {
                             </div>
                           )}
 
-                          {/* 탑승자 양방향 화면 */}
+                          {/* 탑승자 화면 */}
                           {userApp?.role === 'rider' && (
                             <div style={{ background: '#f8fafc', padding: '15px', borderRadius: '8px', marginBottom: '15px' }}>
                               <h5 style={{ margin: '0 0 10px 0', fontSize: '14px' }}>{t.myAssignment}</h5>
@@ -721,7 +753,6 @@ export default function Home() {
                             </div>
                           )}
 
-                          {/* 신청 및 취소 버튼 (마감 상태에 따라 변경) */}
                           {event.isLocked ? (
                             <div style={{ width: '100%', padding: '12px', background: '#f1f5f9', color: '#64748b', textAlign: 'center', borderRadius: '8px', fontWeight: 'bold' }}>{t.evtLocked}</div>
                           ) : (
@@ -755,15 +786,12 @@ export default function Home() {
                   <div style={{ marginBottom: '15px' }}><label style={{ display: 'block', fontSize: '13px', fontWeight: 'bold', marginBottom: '5px' }}>{t.destL}</label><input required value={newEvent.destination} onChange={e => setNewEvent({...newEvent, destination: e.target.value})} style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #ccc' }} /></div>
                   <button type="submit" style={{ width: '100%', padding: '12px', background: '#3b82f6', color: 'white', borderRadius: '8px', fontWeight: 'bold', border: 'none', cursor: 'pointer' }}>{creatingEvent ? t.creatingBtn : t.createBtn}</button>
                 </form>
-
                 <hr style={{ margin: '20px 0', border: 'none', borderTop: '1px solid #e4e4e7' }} />
-                <button onClick={handleAutoGenerateEvents} disabled={creatingEvent} style={{ width: '100%', padding: '12px', background: '#10b981', color: 'white', borderRadius: '8px', fontWeight: 'bold', border: 'none', cursor: 'pointer' }}>
-                  {creatingEvent ? t.creatingBtn : t.autoGenBtn}
-                </button>
+                <button onClick={handleAutoGenerateEvents} disabled={creatingEvent} style={{ width: '100%', padding: '12px', background: '#10b981', color: 'white', borderRadius: '8px', fontWeight: 'bold', border: 'none', cursor: 'pointer' }}>{creatingEvent ? t.creatingBtn : t.autoGenBtn}</button>
               </div>
             )}
 
-            {/* -------------------- 3. ASSIGN TAB (잠금 & 주소 정렬) -------------------- */}
+            {/* -------------------- 3. ASSIGN TAB (구역 컬러링 및 정렬) -------------------- */}
             {currentTab === 'assign' && canManage && (
               <div>
                 <h2 style={{ margin: '0 0 20px 0', fontSize: '18px' }}>{t.adminAssign}</h2>
@@ -772,7 +800,6 @@ export default function Home() {
                     <option value="">{t.selectEvt}</option>
                     {events.map(ev => <option key={ev.id} value={ev.id}>{ev.date} - {ev.title}</option>)}
                   </select>
-                  {/* 일정 마감 및 삭제 버튼 */}
                   {currentAdminEvent && (
                     <button onClick={() => handleToggleLock(currentAdminEvent.id, !!currentAdminEvent.isLocked)} style={{ padding: '0 15px', background: currentAdminEvent.isLocked ? '#f59e0b' : '#10b981', color: '#fff', border: 'none', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer', whiteSpace: 'nowrap' }}>
                       {currentAdminEvent.isLocked ? t.unlockEvt : t.lockEvt}
@@ -790,28 +817,16 @@ export default function Home() {
                     {profile.isAdmin && (
                       <div style={{ marginBottom: '20px', padding: '15px', background: '#f8fafc', borderRadius: '8px', border: '1px solid #cbd5e1' }}>
                         <h4 style={{ margin: '0 0 10px 0', fontSize: '14px', color: '#334155' }}>[+] {t.proxyApplyTitle}</h4>
-                        <input
-                          type="text"
-                          placeholder={t.searchPlaceholder}
-                          value={searchQuery}
-                          onChange={e => setSearchQuery(e.target.value)}
-                          style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #ccc', fontSize: '13px' }}
-                        />
+                        <input type="text" placeholder={t.searchPlaceholder} value={searchQuery} onChange={e => setSearchQuery(e.target.value)} style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #ccc', fontSize: '13px' }} />
                         {searchQuery && (
                           <div style={{ marginTop: '5px', maxHeight: '150px', overflowY: 'auto', background: '#fff', border: '1px solid #e2e8f0', borderRadius: '6px' }}>
                             {allUsersList.filter(u => u.name.includes(searchQuery)).map(u => (
-                              <div
-                                key={u.id}
-                                onClick={() => handleProxyApply(u)}
-                                style={{ padding: '10px', borderBottom: '1px solid #f1f5f9', cursor: 'pointer', fontSize: '13px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
-                              >
-                                <span><strong>{u.name}</strong> ({u.rideType})</span>
+                              <div key={u.id} onClick={() => handleProxyApply(u)} style={{ padding: '10px', borderBottom: '1px solid #f1f5f9', cursor: 'pointer', fontSize: '13px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <span><strong>{u.name}</strong> <span style={{fontSize: '11px', color: '#64748b'}}>({t[u.zone || 'zone6']?.split(' ')[0]})</span></span>
                                 <span style={{ color: '#2563eb', fontWeight: 'bold', fontSize: '11px', background: '#dbeafe', padding: '4px 8px', borderRadius: '4px' }}>{t.addBtn}</span>
                               </div>
                             ))}
-                            {allUsersList.filter(u => u.name.includes(searchQuery)).length === 0 && (
-                              <div style={{ padding: '10px', fontSize: '13px', color: '#94a3b8' }}>{t.noResult}</div>
-                            )}
+                            {allUsersList.filter(u => u.name.includes(searchQuery)).length === 0 && <div style={{ padding: '10px', fontSize: '13px', color: '#94a3b8' }}>{t.noResult}</div>}
                           </div>
                         )}
                       </div>
@@ -829,8 +844,6 @@ export default function Home() {
                     </div>
 
                     <div onDragOver={(e) => { e.preventDefault(); setDragOverCarId('waiting'); }} onDrop={(e) => handleDrop(e, null)} style={{ background: dragOverCarId === 'waiting' ? '#f3f4f6' : '#fff', padding: '15px', borderRadius: '12px', border: '1px solid #e4e4e7', marginBottom: '20px', minHeight: '100px' }}>
-                      
-                      {/* 대기 명단 헤더 및 주소 정렬 토글 버튼 */}
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
                         <h4 style={{ margin: 0 }}>{t.waitList} ({unassignedRiders.length})</h4>
                         <button onClick={() => setSortByAddress(!sortByAddress)} style={{ padding: '6px 10px', fontSize: '11px', fontWeight: 'bold', borderRadius: '6px', border: '1px solid #cbd5e1', background: '#f8fafc', cursor: 'pointer' }}>
@@ -838,16 +851,20 @@ export default function Home() {
                         </button>
                       </div>
 
-                      {/* 정렬이 적용된 대기 명단 렌더링 */}
+                      {/* 대기 명단 렌더링 (구역별 색깔 테두리 적용) */}
                       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-                        {sortedUnassignedRiders.map(r => (
-                          <div key={r.id} draggable onDragStart={e => e.dataTransfer.setData('passengerId', r.id)} style={{ padding: '8px 12px', background: '#f8fafc', border: '1px solid #cbd5e1', borderRadius: '12px', fontSize: '13px', fontWeight: 'bold', cursor: 'grab', textAlign: 'center' }}>
-                            <div>{r.name}</div>
-                            {sortByAddress && <div style={{ fontSize: '10px', color: '#64748b', fontWeight: 'normal', marginTop: '4px', maxWidth: '100px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.address}</div>}
-                          </div>
-                        ))}
+                        {sortedUnassignedRiders.map(r => {
+                          const zColor = zoneColors[r.zone || 'zone6'];
+                          const zNameShort = (t[r.zone || 'zone6'] || '').split(' (')[0];
+                          return (
+                            <div key={r.id} draggable onDragStart={e => e.dataTransfer.setData('passengerId', r.id)} style={{ padding: '8px 12px', background: '#f8fafc', border: '1px solid #cbd5e1', borderLeft: `5px solid ${zColor}`, borderRadius: '8px', fontSize: '13px', fontWeight: 'bold', cursor: 'grab' }}>
+                              <div style={{ fontSize: '10px', color: zColor, marginBottom: '2px' }}>{zNameShort}</div>
+                              <div>{r.name}</div>
+                              {sortByAddress && <div style={{ fontSize: '10px', color: '#64748b', fontWeight: 'normal', marginTop: '4px', maxWidth: '100px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.address}</div>}
+                            </div>
+                          );
+                        })}
                       </div>
-
                     </div>
 
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
@@ -871,7 +888,12 @@ export default function Home() {
                               </div>
                             </div>
                             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', minHeight: '40px', background: '#f8fafc', padding: '10px', borderRadius: '8px' }}>
-                              {passengers.map(p => <div key={p.id} draggable onDragStart={e => e.dataTransfer.setData('passengerId', p.id)} style={{ padding: '6px 12px', background: '#3b82f6', color: '#fff', borderRadius: '20px', fontSize: '13px', fontWeight: 'bold' }}>{p.name}</div>)}
+                              {passengers.map(p => {
+                                const zColor = zoneColors[p.zone || 'zone6'];
+                                return (
+                                  <div key={p.id} draggable onDragStart={e => e.dataTransfer.setData('passengerId', p.id)} style={{ padding: '6px 12px', background: zColor, color: '#fff', borderRadius: '20px', fontSize: '13px', fontWeight: 'bold' }}>{p.name}</div>
+                                )
+                              })}
                             </div>
                           </div>
                         );
@@ -897,6 +919,19 @@ export default function Home() {
                     <form onSubmit={handleAddGuest}>
                       <div style={{ marginBottom: '10px' }}><label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', marginBottom: '3px' }}>{t.name}</label><input required value={guestData.name} onChange={e => setGuestData({...guestData, name: e.target.value})} style={{ width: '100%', padding: '8px', borderRadius: '4px', border: '1px solid #ccc', fontSize: '13px' }} /></div>
                       <div style={{ marginBottom: '10px' }}><label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', marginBottom: '3px' }}>{t.phone}</label><input required type="tel" value={guestData.phone} onChange={e => setGuestData({...guestData, phone: e.target.value})} style={{ width: '100%', padding: '8px', borderRadius: '4px', border: '1px solid #ccc', fontSize: '13px' }} /></div>
+                      
+                      <div style={{ marginBottom: '10px' }}>
+                        <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', marginBottom: '3px' }}>{t.zoneL}</label>
+                        <select value={guestData.zone} onChange={e => setGuestData({...guestData, zone: e.target.value})} style={{ width: '100%', padding: '8px', borderRadius: '4px', border: '1px solid #ccc', fontSize: '13px' }}>
+                          <option value="zone1">{t.zone1}</option>
+                          <option value="zone2">{t.zone2}</option>
+                          <option value="zone3">{t.zone3}</option>
+                          <option value="zone4">{t.zone4}</option>
+                          <option value="zone5">{t.zone5}</option>
+                          <option value="zone6">{t.zone6}</option>
+                        </select>
+                      </div>
+
                       <div style={{ marginBottom: '10px' }}><label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', marginBottom: '3px' }}>{t.address}</label><input required value={guestData.address} onChange={e => setGuestData({...guestData, address: e.target.value})} style={{ width: '100%', padding: '8px', borderRadius: '4px', border: '1px solid #ccc', fontSize: '13px' }} /></div>
                       <div style={{ marginBottom: '15px' }}>
                         <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', marginBottom: '3px' }}>{t.rideType}</label>
@@ -914,8 +949,8 @@ export default function Home() {
                     <thead>
                       <tr style={{ background: '#f4f4f5', borderBottom: '2px solid #e4e4e7' }}>
                         <th style={{ padding: '10px', textAlign: 'left' }}>{t.name}</th>
+                        <th style={{ padding: '10px', textAlign: 'left' }}>Zone</th>
                         <th style={{ padding: '10px', textAlign: 'left' }}>{t.phone}</th>
-                        <th style={{ padding: '10px', textAlign: 'left' }}>{t.address}</th>
                         <th style={{ padding: '10px', textAlign: 'left' }}>{t.rideType}</th>
                       </tr>
                     </thead>
@@ -923,9 +958,9 @@ export default function Home() {
                       {allUsersList.map(u => (
                         <tr key={u.id} style={{ borderBottom: '1px solid #e4e4e7' }}>
                           <td style={{ padding: '10px', fontWeight: 'bold' }}>{u.name} {u.isGuest && <span style={{ color: '#059669', fontSize: '10px', marginLeft: '4px' }}>(Guest)</span>} {u.isAdmin && <span style={{ color: '#ef4444', fontSize: '10px', marginLeft: '4px' }}>(Admin)</span>}</td>
+                          <td style={{ padding: '10px', color: zoneColors[u.zone || 'zone6'], fontWeight: 'bold' }}>{(t[u.zone || 'zone6'] || '').split(' ')[0]}</td>
                           <td style={{ padding: '10px' }}><a href={`tel:${u.phone}`} style={{ color: '#2563eb', textDecoration: 'none' }}>{u.phone}</a></td>
-                          <td style={{ padding: '10px' }}>{u.address}</td>
-                          <td style={{ padding: '10px' }}>{u.rideType} {u.isVan && <span style={{ color: '#059669', fontWeight: 'bold' }}>[Van]</span>}</td>
+                          <td style={{ padding: '10px' }}>{u.rideType}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -941,6 +976,7 @@ export default function Home() {
                 <div style={{ background: '#f8fafc', padding: '15px', borderRadius: '8px', marginBottom: '20px' }}>
                   <p style={{ margin: '0 0 10px 0', fontSize: '14px' }}><strong>{t.name}:</strong> {profile.name}</p>
                   <p style={{ margin: '0 0 10px 0', fontSize: '14px' }}><strong>{t.phone}:</strong> {profile.phone}</p>
+                  <p style={{ margin: '0 0 10px 0', fontSize: '14px' }}><strong>{t.zoneL}:</strong> {t[profile.zone || 'zone6']}</p>
                   <p style={{ margin: '0 0 10px 0', fontSize: '14px' }}><strong>{t.address}:</strong> {profile.address}</p>
                   <p style={{ margin: '0 0 10px 0', fontSize: '14px' }}><strong>{t.rideType}:</strong> {profile.rideType}</p>
                   <div style={{ marginTop: '15px', paddingTop: '15px', borderTop: '1px solid #e2e8f0' }}>
@@ -972,7 +1008,7 @@ export default function Home() {
               </div>
             )}
             
-            {/* -------------------- 맞춤 신청 팝업 모달 -------------------- */}
+            {/* -------------------- 맞춤 신청 팝업 -------------------- */}
             {applyEvent && (
               <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '20px' }}>
                 <div style={{ background: '#fff', padding: '25px', borderRadius: '12px', width: '100%', maxWidth: '350px' }}>
@@ -1009,10 +1045,8 @@ export default function Home() {
       {user && profile && (
         <nav style={{ position: 'fixed', bottom: 0, left: '50%', transform: 'translateX(-50%)', width: '100%', maxWidth: '480px', background: '#ffffff', display: 'flex', borderTop: '1px solid #e4e4e7' }}>
           <button onClick={() => setCurrentTab('calendar')} style={{ flex: 1, padding: '15px 0', background: 'none', border: 'none', color: currentTab === 'calendar' ? '#18181b' : '#a1a1aa', fontWeight: currentTab === 'calendar' ? 'bold' : 'normal', fontSize: '13px', cursor: 'pointer' }}>{t.navCal}</button>
-          
           {canManage && <button onClick={() => setCurrentTab('create')} style={{ flex: 1, padding: '15px 0', background: 'none', border: 'none', color: currentTab === 'create' ? '#18181b' : '#a1a1aa', fontWeight: currentTab === 'create' ? 'bold' : 'normal', fontSize: '13px', cursor: 'pointer' }}>{t.adminNew}</button>}
           {canManage && <button onClick={() => setCurrentTab('assign')} style={{ flex: 1, padding: '15px 0', background: 'none', border: 'none', color: currentTab === 'assign' ? '#18181b' : '#a1a1aa', fontWeight: currentTab === 'assign' ? 'bold' : 'normal', fontSize: '13px', cursor: 'pointer' }}>{t.adminAssign}</button>}
-          
           {profile.isAdmin && <button onClick={() => setCurrentTab('users')} style={{ flex: 1, padding: '15px 0', background: 'none', border: 'none', color: currentTab === 'users' ? '#18181b' : '#a1a1aa', fontWeight: currentTab === 'users' ? 'bold' : 'normal', fontSize: '13px', cursor: 'pointer' }}>{t.adminUsers}</button>}
         </nav>
       )}
