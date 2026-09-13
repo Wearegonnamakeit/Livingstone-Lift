@@ -462,7 +462,7 @@ export default function Home() {
       // 정기참석 켜둔 모든 유저 불러와서 자동 배정
       const uQ = query(collection(db, 'users'));
       const uSnap = await getDocs(uQ);
-      const allUs = uSnap.docs.map(d => ({id: d.id, ...d.data()}));
+      const allUs = uSnap.docs.map(d => ({id: d.id, ...d.data()})) as (UserProfile & {id: string})[];
 
       for (const u of allUs) {
         if (u.regFri || u.regSatPraise || u.regSunPraise || u.regSun) {
