@@ -69,13 +69,13 @@ const text: Record<string, any> = {
     statsTxt: "Total Riders", statsSeats: "Total Seats", statsAvail: "Seats Available", statsShort: "Seat Shortage",
     addGuestBtn: "Add Offline User", proxyApplyTitle: "Proxy Apply (Search)", searchPlaceholder: "Search by name...", addBtn: "Add", noResult: "No results found.",
     applyModalTitle: "Application", confirmApply: "Confirm Apply", close: "Close",
-    autoGenBtn: "Auto-Generate 1 Month (Fri/Sun)", autoGenConfirm: "Generate regular Friday/Sunday events for the next 30 days?", autoGenDone: "Events generated!",
+    autoGenBtn: "Auto-Generate 1 Month (Fri/Sat/Sun)", autoGenConfirm: "Generate regular and praise team events for the next 30 days?", autoGenDone: "Events generated!",
     lockEvt: "Lock Event", unlockEvt: "Unlock Event", evtLocked: "Event Closed", sortByAddr: "📍 Group by Zone", sortByName: "🔤 Sort by Name",
     zoneL: "Residential Zone", 
     zone1: "State St. / Downtown (Hub, Lucky, Cap Square, etc.)", zone2: "The Nick / Southeast (Witte, Sellery, Kohl Center, etc.)",
     zone3: "Union South / Regent (Engineering, Camp Randall, etc.)", zone4: "Hilldale / Sheboygan (Hilldale Mall, West Side Apts)",
     zone5: "Eagle Heights (University Houses, etc.)", zone6: "Other (Any other areas)",
-    editProfile: "Edit Profile", cancelEdit: "Cancel Edit", selectToAssign: "Tap a person, then tap a car to assign.", dailyRoster: "Daily Attendees"
+    editProfile: "Edit Profile", cancelEdit: "Cancel Edit", selectToAssign: "Tap a person, then tap a car to assign.", dailyRoster: "Daily Attendees",
   },
   ko: {
     appTitle: "Livingstone Lift", loginReq: "앱을 사용하려면 로그인해 주세요.", loginBtn: "구글 계정으로 시작하기",
@@ -100,7 +100,7 @@ const text: Record<string, any> = {
     statsTxt: "신청 인원", statsSeats: "전체 좌석", statsAvail: "남은 자리", statsShort: "자리 부족",
     addGuestBtn: "수동 교인 추가", proxyApplyTitle: "대리 신청 (이름 검색)", searchPlaceholder: "이름을 입력하세요...", addBtn: "추가", noResult: "검색 결과가 없습니다.",
     applyModalTitle: "탑승 신청", confirmApply: "신청 완료", close: "닫기",
-    autoGenBtn: "1달치 정기예배 자동 생성 (금/주일)", autoGenConfirm: "앞으로 30일간의 금요일, 일요일 정기 예배 일정을 생성하시겠습니까?", autoGenDone: "생성 완료되었습니다.",
+    autoGenBtn: "1달치 예배/찬양팀 자동 생성 (금/토/일)", autoGenConfirm: "앞으로 30일간의 정기 예배 및 찬양팀 일정을 생성하시겠습니까?", autoGenDone: "생성 완료되었습니다.",
     lockEvt: "일정 마감", unlockEvt: "마감 해제", evtLocked: "마감된 일정입니다", sortByAddr: "📍 구역별 색깔 정렬", sortByName: "🔤 이름순 정렬",
     zoneL: "거주 구역 (차량 배정용)", 
     zone1: "State St. / Downtown (허브, 럭키, 캡스퀘어 등)", zone2: "The Nick / Southeast (콜 센터, Witte, Sellery 등)",
@@ -359,16 +359,44 @@ export default function Home() {
       for (let i = 0; i <= 30; i++) {
         const targetDate = new Date(today.getFullYear(), today.getMonth(), today.getDate() + i);
         const day = targetDate.getDay();
-        if (day === 5 || day === 0) { 
-          const dateStr = `${targetDate.getFullYear()}-${String(targetDate.getMonth() + 1).padStart(2, '0')}-${String(targetDate.getDate()).padStart(2, '0')}`;
-          const exists = events.some(e => e.date === dateStr && e.type === 'regular');
+        const dateStr = `${targetDate.getFullYear()}-${String(targetDate.getMonth() + 1).padStart(2, '0')}-${String(targetDate.getDate()).padStart(2, '0')}`;
+
+        // 1. 금요일 (오후 6시 일반)
+        if (day === 5) {
+          const exists = events.some(e => e.date === dateStr && e.title.includes('Friday'));
           if (!exists) {
-            const isFriday = day === 5;
             await addDoc(collection(db, 'events'), {
-              title: isFriday ? '금요예배 / Friday Worship (6 PM)' : '주일예배 / Sunday Worship (1 PM)',
-              date: dateStr,
-              destination: isFriday ? 'MU 옆 서클 / MU Circle' : '체이즌 뮤지엄 앞 / Chazen Museum',
-              type: 'regular', isLocked: false
+              title: '금요예배 / Friday Worship (6 PM)',
+              date: dateStr, destination: 'MU 옆 서클 / MU Circle', type: 'regular', isLocked: false
+            });
+          }
+        }
+        
+        // 2. 토요일 (오후 6시 반 찬양팀)
+        if (day === 6) {
+          const exists = events.some(e => e.date === dateStr && e.title.includes('Saturday Praise'));
+          if (!exists) {
+            await addDoc(collection(db, 'events'), {
+              title: '토요 찬양팀 연습 / Saturday Praise Team (6:30 PM)',
+              date: dateStr, destination: '자택 순차 픽업 / Sequential Pickup', type: 'special', isLocked: false
+            });
+          }
+        }
+
+        // 3. 일요일 (12시 찬양팀 & 1시 일반)
+        if (day === 0) {
+          const earlyExists = events.some(e => e.date === dateStr && e.title.includes('Praise Team Early'));
+          if (!earlyExists) {
+            await addDoc(collection(db, 'events'), {
+              title: '주일 찬양팀 (12 PM) / Praise Team Early',
+              date: dateStr, destination: '자택 순차 픽업 / Sequential Pickup', type: 'special', isLocked: false
+            });
+          }
+          const regularExists = events.some(e => e.date === dateStr && e.title.includes('Sunday Worship'));
+          if (!regularExists) {
+            await addDoc(collection(db, 'events'), {
+              title: '주일예배 / Sunday Worship (1 PM)',
+              date: dateStr, destination: '체이즌 뮤지엄 앞 / Chazen Museum', type: 'regular', isLocked: false
             });
           }
         }
@@ -376,7 +404,11 @@ export default function Home() {
       await fetchEvents();
       alert(t.autoGenDone);
       setCurrentTab('calendar');
-    } catch (error) { console.error(error); } finally { setCreatingEvent(false); }
+    } catch (error) { 
+      console.error(error); 
+    } finally { 
+      setCreatingEvent(false); 
+    }
   };
 
   const handleDeleteEvent = async (eventId: string) => {
