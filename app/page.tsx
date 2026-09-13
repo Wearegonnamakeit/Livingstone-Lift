@@ -627,7 +627,7 @@ export default function Home() {
   const currentAdminEvent = events.find(e => e.id === adminSelectedEventId);
 
   return (
-    <div style={{ width: '100%', maxWidth: '480px', margin: '0 auto', background: '#f4f4f5', minHeight: '100vh', paddingBottom: '80px', fontFamily: 'sans-serif' }}>
+    <div style={{ width: '100%', maxWidth: '480px', margin: '0 auto', background: '#f4f4f5', color: '#18181b', colorScheme: 'light', minHeight: '100vh', paddingBottom: '80px', fontFamily: 'sans-serif' }}>
       
       <header style={{ background: '#ffffff', padding: '15px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid #e4e4e7' }}>
         <h1 style={{ margin: 0, fontSize: '18px', color: '#18181b', fontWeight: 'bold' }}>{t.appTitle}</h1>
