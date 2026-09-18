@@ -179,6 +179,8 @@ export default function Home() {
   const [isAddingQuickGuest, setIsAddingQuickGuest] = useState(false);
   const [quickGuestName, setQuickGuestName] = useState('');
   const [quickGuestZone, setQuickGuestZone] = useState('zone6');
+  const [quickGuestRideType, setQuickGuestRideType] = useState('Need a Ride');
+  const [quickGuestCapacity, setQuickGuestCapacity] = useState('4');
 
   const [applyEvent, setApplyEvent] = useState<ChurchEvent | null>(null);
   const [applyData, setApplyData] = useState({ rideType: '', capacity: '', isVan: false });
@@ -405,12 +407,14 @@ export default function Home() {
     } catch (error) { console.error(error); }
   };
 
-  // 일회성 방문자 퀵 추가 로직
+  // 일회성 방문자 퀵 추가 로직 (운전자 옵션 포함)
   const handleAddQuickGuest = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!adminSelectedEventId || !profile?.isAdmin || !quickGuestName.trim()) return;
     try {
       const tempUserId = `quick_${Date.now()}`;
+      const isDriver = quickGuestRideType.includes('Drive');
+      
       await setDoc(doc(db, 'applications', `${adminSelectedEventId}_${tempUserId}`), {
         eventId: adminSelectedEventId,
         userId: tempUserId,
@@ -418,9 +422,9 @@ export default function Home() {
         phone: '',
         address: lang === 'ko' ? '현장 방문' : 'Walk-in',
         zone: quickGuestZone,
-        rideType: 'Need a Ride',
-        capacity: '4',
-        role: 'rider',
+        rideType: quickGuestRideType,
+        capacity: isDriver ? quickGuestCapacity : '4',
+        role: isDriver ? 'driver' : 'rider',
         carIdTo: null,
         carIdFrom: null,
         statusTo: '',
@@ -431,6 +435,8 @@ export default function Home() {
       setIsAddingQuickGuest(false);
       setQuickGuestName('');
       setQuickGuestZone('zone6');
+      setQuickGuestRideType('Need a Ride');
+      setQuickGuestCapacity('4');
     } catch (error) { console.error(error); }
   };
 
@@ -926,25 +932,36 @@ export default function Home() {
                     {profile.isAdmin && (
                       <div style={{ marginBottom: '20px', padding: '15px', background: '#f8fafc', borderRadius: '8px', border: '1px solid #cbd5e1' }}>
                         
-                        {/* 대리 신청 타이틀 및 일회성 방문자 퀵 추가 버튼 */}
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
                           <h4 style={{ margin: 0, fontSize: '14px', color: '#334155' }}>[+] {t.proxyApplyTitle}</h4>
                           <button onClick={() => setIsAddingQuickGuest(!isAddingQuickGuest)} style={{ padding: '4px 8px', background: '#e2e8f0', border: 'none', borderRadius: '4px', fontSize: '11px', fontWeight: 'bold', cursor: 'pointer' }}>{t.quickGuestBtn}</button>
                         </div>
 
-                        {/* 방문자 퀵 추가 폼 */}
+                        {/* 방문자 퀵 추가 폼 (운전자 옵션 포함) */}
                         {isAddingQuickGuest && (
-                          <form onSubmit={handleAddQuickGuest} style={{ display: 'flex', gap: '5px', marginBottom: '10px' }}>
-                            <input required placeholder={t.quickGuestName} value={quickGuestName} onChange={e=>setQuickGuestName(e.target.value)} style={{ flex: 1, padding: '8px', borderRadius: '4px', border: '1px solid #ccc', fontSize: '13px' }} />
-                            <select value={quickGuestZone} onChange={e=>setQuickGuestZone(e.target.value)} style={{ padding: '8px', borderRadius: '4px', border: '1px solid #ccc', fontSize: '13px' }}>
-                              <option value="zone1">{(t.zone1 || '').split(' ')[0]}</option>
-                              <option value="zone2">{(t.zone2 || '').split(' ')[0]}</option>
-                              <option value="zone3">{(t.zone3 || '').split(' ')[0]}</option>
-                              <option value="zone4">{(t.zone4 || '').split(' ')[0]}</option>
-                              <option value="zone5">{(t.zone5 || '').split(' ')[0]}</option>
-                              <option value="zone6">{(t.zone6 || '').split(' ')[0]}</option>
-                            </select>
-                            <button type="submit" style={{ padding: '8px 12px', background: '#18181b', color: '#fff', border: 'none', borderRadius: '4px', fontWeight: 'bold', cursor: 'pointer' }}>{t.addBtn}</button>
+                          <form onSubmit={handleAddQuickGuest} style={{ display: 'flex', flexDirection: 'column', gap: '5px', marginBottom: '15px', background: '#fff', padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1' }}>
+                            <div style={{ display: 'flex', gap: '5px' }}>
+                              <input required placeholder={t.quickGuestName} value={quickGuestName} onChange={e=>setQuickGuestName(e.target.value)} style={{ flex: 1, padding: '8px', borderRadius: '4px', border: '1px solid #ccc', fontSize: '13px' }} />
+                              <select value={quickGuestZone} onChange={e=>setQuickGuestZone(e.target.value)} style={{ width: '100px', padding: '8px', borderRadius: '4px', border: '1px solid #ccc', fontSize: '13px' }}>
+                                <option value="zone1">{(t.zone1 || '').split(' ')[0]}</option>
+                                <option value="zone2">{(t.zone2 || '').split(' ')[0]}</option>
+                                <option value="zone3">{(t.zone3 || '').split(' ')[0]}</option>
+                                <option value="zone4">{(t.zone4 || '').split(' ')[0]}</option>
+                                <option value="zone5">{(t.zone5 || '').split(' ')[0]}</option>
+                                <option value="zone6">{(t.zone6 || '').split(' ')[0]}</option>
+                              </select>
+                            </div>
+                            <div style={{ display: 'flex', gap: '5px' }}>
+                              <select value={quickGuestRideType} onChange={e=>setQuickGuestRideType(e.target.value)} style={{ flex: 1, padding: '8px', borderRadius: '4px', border: '1px solid #ccc', fontSize: '13px' }}>
+                                <option value="Need a Ride">{t.needRide}</option>
+                                <option value="Can Drive">{t.canDrive}</option>
+                                <option value="Drive Self">{t.driveSelf}</option>
+                              </select>
+                              {quickGuestRideType === 'Can Drive' && (
+                                <input type="number" value={quickGuestCapacity} onChange={e=>setQuickGuestCapacity(e.target.value)} style={{ width: '60px', padding: '8px', borderRadius: '4px', border: '1px solid #ccc', fontSize: '13px' }} title="탑승 가능 인원" />
+                              )}
+                              <button type="submit" style={{ padding: '8px 15px', background: '#18181b', color: '#fff', border: 'none', borderRadius: '4px', fontWeight: 'bold', cursor: 'pointer' }}>{t.addBtn}</button>
+                            </div>
                           </form>
                         )}
 
