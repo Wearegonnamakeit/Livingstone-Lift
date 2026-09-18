@@ -81,7 +81,8 @@ const text: Record<string, any> = {
     zone5: "Eagle Heights (University Houses, etc.)", zone6: "Other (Any other areas)",
     editProfile: "Edit Profile", cancelEdit: "Cancel Edit", selectToAssign: "Tap a person, then tap a car to assign.", dailyRoster: "Daily Attendees",
     regLabel: "Regular Attendance (Auto-Apply)", regFri: "Friday Worship", regSatPraise: "Sat Praise", regSunPraise: "Sun Praise", regSun: "Sunday Worship",
-    praiseNotice: "💡 Praise team members: please check BOTH 'Sun Praise' and 'Sunday Worship'.", quickGuestBtn: "Quick Add Visitor", quickGuestName: "Visitor Name"
+    praiseNotice: "💡 Praise team members: please check BOTH 'Sun Praise' and 'Sunday Worship'.", quickGuestBtn: "Quick Add Visitor", quickGuestName: "Visitor Name",
+    confirmRemoveApp: "Are you sure you want to completely remove this applicant?", deleteTxt: "Delete"
   },
   ko: {
     appTitle: "Livingstone Lift", loginReq: "앱을 사용하려면 로그인해 주세요.", loginBtn: "구글 계정으로 시작하기",
@@ -114,7 +115,8 @@ const text: Record<string, any> = {
     zone5: "Eagle Heights (이글 하이츠 가족 기숙사)", zone6: "Other (그 외 기타 지역)",
     editProfile: "프로필 수정", cancelEdit: "수정 취소", selectToAssign: "💡 대기자를 먼저 터치한 후, 차량을 터치해 배정하세요.", dailyRoster: "해당 날짜 신청자 명단",
     regLabel: "정기 참석 자동 신청", regFri: "금요예배", regSatPraise: "토요 찬양팀", regSunPraise: "주일 찬양팀", regSun: "주일예배",
-    praiseNotice: "💡 주일 찬양팀 봉사자는 '주일 찬양팀'과 '주일예배'를 둘 다 체크해 주세요.", quickGuestBtn: "방문자 퀵추가", quickGuestName: "방문자 이름"
+    praiseNotice: "💡 주일 찬양팀 봉사자는 '주일 찬양팀'과 '주일예배'를 둘 다 체크해 주세요.", quickGuestBtn: "방문자 퀵추가", quickGuestName: "방문자 이름",
+    confirmRemoveApp: "이 신청자를 명단에서 완전히 삭제하시겠습니까?", deleteTxt: "삭제"
   }
 };
 
@@ -175,7 +177,6 @@ export default function Home() {
     regFri: false, regSatPraise: false, regSunPraise: false, regSun: false 
   });
 
-  // 일회성 방문자 퀵 추가 관련 상태
   const [isAddingQuickGuest, setIsAddingQuickGuest] = useState(false);
   const [quickGuestName, setQuickGuestName] = useState('');
   const [quickGuestZone, setQuickGuestZone] = useState('zone6');
@@ -407,7 +408,6 @@ export default function Home() {
     } catch (error) { console.error(error); }
   };
 
-  // 일회성 방문자 퀵 추가 로직 (운전자 옵션 포함)
   const handleAddQuickGuest = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!adminSelectedEventId || !profile?.isAdmin || !quickGuestName.trim()) return;
@@ -566,6 +566,16 @@ export default function Home() {
   };
 
   const handleCancelApplication = async (eventId: string) => { if (user) await deleteDoc(doc(db, 'applications', `${eventId}_${user.uid}`)); };
+
+  // 관리자용 신청자 개별 삭제 기능
+  const handleRemoveApplication = async (appId: string) => {
+    if (confirm(t.confirmRemoveApp)) {
+      try {
+        await deleteDoc(doc(db, 'applications', appId));
+        if (selectedRiderId === appId) setSelectedRiderId(null);
+      } catch (error) { console.error(error); }
+    }
+  };
 
   const updateVehicle = async (appId: string, isVan: boolean, capacity: string) => {
     try { await updateDoc(doc(db, 'applications', appId), { isVan, capacity }); } catch (error) { console.error(error); }
@@ -933,7 +943,7 @@ export default function Home() {
                       <div style={{ marginBottom: '20px', padding: '15px', background: '#f8fafc', borderRadius: '8px', border: '1px solid #cbd5e1' }}>
                         
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
-                          <h4 style={{ margin: 0, fontSize: '14px', color: '#334155' }}>[+] {t.proxyApplyTitle}</h4>
+                          <h4 style={{ margin: '0', fontSize: '14px', color: '#334155' }}>[+] {t.proxyApplyTitle}</h4>
                           <button onClick={() => setIsAddingQuickGuest(!isAddingQuickGuest)} style={{ padding: '4px 8px', background: '#e2e8f0', border: 'none', borderRadius: '4px', fontSize: '11px', fontWeight: 'bold', cursor: 'pointer' }}>{t.quickGuestBtn}</button>
                         </div>
 
@@ -1054,6 +1064,7 @@ export default function Home() {
                       })}
                     </div>
 
+                    {/* 신청자 명단 및 개별 삭제 기능 표 */}
                     <div style={{ background: '#ffffff', padding: '15px', borderRadius: '12px', marginTop: '30px', overflowX: 'auto', border: '1px solid #e4e4e7' }}>
                       <h3 style={{ margin: '0 0 15px 0', fontSize: '16px' }}>{t.dailyRoster} ({eventAttendees.length})</h3>
                       <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px', minWidth: '400px' }}>
@@ -1063,6 +1074,7 @@ export default function Home() {
                             <th style={{ padding: '10px', textAlign: 'left' }}>{t.rideType}</th>
                             <th style={{ padding: '10px', textAlign: 'left' }}>Zone</th>
                             <th style={{ padding: '10px', textAlign: 'left' }}>{t.phone}</th>
+                            <th style={{ padding: '10px', textAlign: 'center' }}>{t.deleteTxt}</th>
                           </tr>
                         </thead>
                         <tbody>
@@ -1072,6 +1084,11 @@ export default function Home() {
                               <td style={{ padding: '10px', color: u.role === 'driver' ? '#2563eb' : '#64748b', fontWeight: 'bold' }}>{u.rideType}</td>
                               <td style={{ padding: '10px', color: zoneColors[u.zone || 'zone6'], fontWeight: 'bold' }}>{(t[u.zone || 'zone6'] || '').split(' ')[0]}</td>
                               <td style={{ padding: '10px' }}><a href={`tel:${u.phone}`} style={{ color: '#2563eb', textDecoration: 'none' }}>{u.phone}</a></td>
+                              <td style={{ padding: '10px', textAlign: 'center' }}>
+                                <button onClick={() => handleRemoveApplication(u.id)} style={{ padding: '4px 8px', background: '#fee2e2', color: '#ef4444', border: 'none', borderRadius: '4px', fontSize: '11px', fontWeight: 'bold', cursor: 'pointer' }}>
+                                  {t.deleteTxt}
+                                </button>
+                              </td>
                             </tr>
                           ))}
                         </tbody>
