@@ -80,7 +80,8 @@ const text: Record<string, any> = {
     zone3: "Union South / Regent (Engineering, Camp Randall, etc.)", zone4: "Hilldale / Sheboygan (Hilldale Mall, West Side Apts)",
     zone5: "Eagle Heights (University Houses, etc.)", zone6: "Other (Any other areas)",
     editProfile: "Edit Profile", cancelEdit: "Cancel Edit", selectToAssign: "Tap a person, then tap a car to assign.", dailyRoster: "Daily Attendees",
-    regLabel: "Regular Attendance (Auto-Apply)", regFri: "Friday Worship", regSatPraise: "Sat Praise", regSunPraise: "Sun Praise", regSun: "Sunday Worship"
+    regLabel: "Regular Attendance (Auto-Apply)", regFri: "Friday Worship", regSatPraise: "Sat Praise", regSunPraise: "Sun Praise", regSun: "Sunday Worship",
+    praiseNotice: "💡 Praise team members: please check BOTH 'Sun Praise' and 'Sunday Worship'.", quickGuestBtn: "Quick Add Visitor", quickGuestName: "Visitor Name"
   },
   ko: {
     appTitle: "Livingstone Lift", loginReq: "앱을 사용하려면 로그인해 주세요.", loginBtn: "구글 계정으로 시작하기",
@@ -112,7 +113,8 @@ const text: Record<string, any> = {
     zone3: "Union South / Regent (공대, 캠프 랜들 근처)", zone4: "Hilldale / Sheboygan (힐데일 몰, 셔보이건 애비뉴 등)",
     zone5: "Eagle Heights (이글 하이츠 가족 기숙사)", zone6: "Other (그 외 기타 지역)",
     editProfile: "프로필 수정", cancelEdit: "수정 취소", selectToAssign: "💡 대기자를 먼저 터치한 후, 차량을 터치해 배정하세요.", dailyRoster: "해당 날짜 신청자 명단",
-    regLabel: "정기 참석 자동 신청", regFri: "금요예배", regSatPraise: "토요 찬양팀", regSunPraise: "주일 찬양팀", regSun: "주일예배"
+    regLabel: "정기 참석 자동 신청", regFri: "금요예배", regSatPraise: "토요 찬양팀", regSunPraise: "주일 찬양팀", regSun: "주일예배",
+    praiseNotice: "💡 주일 찬양팀 봉사자는 '주일 찬양팀'과 '주일예배'를 둘 다 체크해 주세요.", quickGuestBtn: "방문자 퀵추가", quickGuestName: "방문자 이름"
   }
 };
 
@@ -172,6 +174,11 @@ export default function Home() {
     name: '', phone: '', address: '', zone: 'zone6', rideType: 'Need a Ride', capacity: '4', isVan: false,
     regFri: false, regSatPraise: false, regSunPraise: false, regSun: false 
   });
+
+  // 일회성 방문자 퀵 추가 관련 상태
+  const [isAddingQuickGuest, setIsAddingQuickGuest] = useState(false);
+  const [quickGuestName, setQuickGuestName] = useState('');
+  const [quickGuestZone, setQuickGuestZone] = useState('zone6');
 
   const [applyEvent, setApplyEvent] = useState<ChurchEvent | null>(null);
   const [applyData, setApplyData] = useState({ rideType: '', capacity: '', isVan: false });
@@ -309,7 +316,6 @@ export default function Home() {
     } catch (error) { console.error(error); }
   };
 
-  // 정기 참석자 자동 신청 핵심 로직 (미래 이벤트들에 일괄 꽂아줌)
   const autoEnrollFutureEvents = async (uid: string, data: any, latestEvents: ChurchEvent[]) => {
     const now = new Date();
     const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
@@ -362,7 +368,6 @@ export default function Home() {
       setProfile(newProfile as UserProfile);
       setIsEditingProfile(false);
       
-      // 최신 이벤트 목록 가져와서 정기참석 일괄 등록
       const evQ = query(collection(db, 'events'));
       const evSnap = await getDocs(evQ);
       const allEvs = evSnap.docs.map(d => ({id: d.id, ...d.data()})) as ChurchEvent[];
@@ -397,6 +402,35 @@ export default function Home() {
       setGuestData({ name: '', phone: '', address: '', zone: 'zone6', rideType: 'Need a Ride', capacity: '4', isVan: false, regFri: false, regSatPraise: false, regSunPraise: false, regSun: false });
       fetchAllUsers();
       alert(lang === 'ko' ? '새 교인이 성공적으로 등록되었습니다.' : 'User added successfully.');
+    } catch (error) { console.error(error); }
+  };
+
+  // 일회성 방문자 퀵 추가 로직
+  const handleAddQuickGuest = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!adminSelectedEventId || !profile?.isAdmin || !quickGuestName.trim()) return;
+    try {
+      const tempUserId = `quick_${Date.now()}`;
+      await setDoc(doc(db, 'applications', `${adminSelectedEventId}_${tempUserId}`), {
+        eventId: adminSelectedEventId,
+        userId: tempUserId,
+        name: quickGuestName + (lang === 'ko' ? ' (방문)' : ' (Guest)'),
+        phone: '',
+        address: lang === 'ko' ? '현장 방문' : 'Walk-in',
+        zone: quickGuestZone,
+        rideType: 'Need a Ride',
+        capacity: '4',
+        role: 'rider',
+        carIdTo: null,
+        carIdFrom: null,
+        statusTo: '',
+        statusFrom: '',
+        isVan: false,
+        appliedAt: serverTimestamp()
+      });
+      setIsAddingQuickGuest(false);
+      setQuickGuestName('');
+      setQuickGuestZone('zone6');
     } catch (error) { console.error(error); }
   };
 
@@ -454,12 +488,10 @@ export default function Home() {
         }
       }
       
-      // 방금 생성한 이벤트 다시 로드
       const evQ = query(collection(db, 'events'));
       const evSnap = await getDocs(evQ);
       const allEvs = evSnap.docs.map(d => ({id: d.id, ...d.data()})) as ChurchEvent[];
       
-      // 정기참석 켜둔 모든 유저 불러와서 자동 배정
       const uQ = query(collection(db, 'users'));
       const uSnap = await getDocs(uQ);
       const allUs = uSnap.docs.map(d => ({id: d.id, ...d.data()})) as (UserProfile & {id: string})[];
@@ -584,7 +616,7 @@ export default function Home() {
     await updateDoc(doc(db, 'applications', selectedRiderId), { [rideDirection === 'to' ? 'carIdTo' : 'carIdFrom']: carId });
     const pSnap = await getDoc(doc(db, 'applications', selectedRiderId));
     const pUserId = pSnap.data()?.userId;
-    if (pUserId) await sendPushToUser(pUserId, t.assignedTitle, t.assignedBody);
+    if (pUserId && !pUserId.startsWith('quick_')) await sendPushToUser(pUserId, t.assignedTitle, t.assignedBody);
     setSelectedRiderId(null); 
   };
 
@@ -680,7 +712,7 @@ export default function Home() {
                 </>
               )}
               
-              {/* 정기 참석 옵션 */}
+              {/* 정기 참석 옵션 및 찬양팀 안내 문구 */}
               <div style={{ background: '#f0fdf4', padding: '15px', borderRadius: '8px', marginBottom: '20px', border: '1px solid #bbf7d0' }}>
                 <label style={{ display: 'block', fontSize: '13px', fontWeight: 'bold', marginBottom: '10px', color: '#166534' }}>{t.regLabel}</label>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
@@ -689,6 +721,7 @@ export default function Home() {
                   <label style={{ fontSize: '13px', display: 'flex', alignItems: 'center', gap: '5px' }}><input type="checkbox" checked={formData.regSatPraise} onChange={e => setFormData({...formData, regSatPraise: e.target.checked})} /> {t.regSatPraise}</label>
                   <label style={{ fontSize: '13px', display: 'flex', alignItems: 'center', gap: '5px' }}><input type="checkbox" checked={formData.regSunPraise} onChange={e => setFormData({...formData, regSunPraise: e.target.checked})} /> {t.regSunPraise}</label>
                 </div>
+                <p style={{ margin: '10px 0 0 0', fontSize: '11px', color: '#b91c1c', fontWeight: 'bold' }}>{t.praiseNotice}</p>
               </div>
 
               <div style={{ display: 'flex', gap: '10px' }}>
@@ -892,7 +925,29 @@ export default function Home() {
                   <>
                     {profile.isAdmin && (
                       <div style={{ marginBottom: '20px', padding: '15px', background: '#f8fafc', borderRadius: '8px', border: '1px solid #cbd5e1' }}>
-                        <h4 style={{ margin: '0 0 10px 0', fontSize: '14px', color: '#334155' }}>[+] {t.proxyApplyTitle}</h4>
+                        
+                        {/* 대리 신청 타이틀 및 일회성 방문자 퀵 추가 버튼 */}
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                          <h4 style={{ margin: 0, fontSize: '14px', color: '#334155' }}>[+] {t.proxyApplyTitle}</h4>
+                          <button onClick={() => setIsAddingQuickGuest(!isAddingQuickGuest)} style={{ padding: '4px 8px', background: '#e2e8f0', border: 'none', borderRadius: '4px', fontSize: '11px', fontWeight: 'bold', cursor: 'pointer' }}>{t.quickGuestBtn}</button>
+                        </div>
+
+                        {/* 방문자 퀵 추가 폼 */}
+                        {isAddingQuickGuest && (
+                          <form onSubmit={handleAddQuickGuest} style={{ display: 'flex', gap: '5px', marginBottom: '10px' }}>
+                            <input required placeholder={t.quickGuestName} value={quickGuestName} onChange={e=>setQuickGuestName(e.target.value)} style={{ flex: 1, padding: '8px', borderRadius: '4px', border: '1px solid #ccc', fontSize: '13px' }} />
+                            <select value={quickGuestZone} onChange={e=>setQuickGuestZone(e.target.value)} style={{ padding: '8px', borderRadius: '4px', border: '1px solid #ccc', fontSize: '13px' }}>
+                              <option value="zone1">{(t.zone1 || '').split(' ')[0]}</option>
+                              <option value="zone2">{(t.zone2 || '').split(' ')[0]}</option>
+                              <option value="zone3">{(t.zone3 || '').split(' ')[0]}</option>
+                              <option value="zone4">{(t.zone4 || '').split(' ')[0]}</option>
+                              <option value="zone5">{(t.zone5 || '').split(' ')[0]}</option>
+                              <option value="zone6">{(t.zone6 || '').split(' ')[0]}</option>
+                            </select>
+                            <button type="submit" style={{ padding: '8px 12px', background: '#18181b', color: '#fff', border: 'none', borderRadius: '4px', fontWeight: 'bold', cursor: 'pointer' }}>{t.addBtn}</button>
+                          </form>
+                        )}
+
                         <input type="text" placeholder={t.searchPlaceholder} value={searchQuery} onChange={e => setSearchQuery(e.target.value)} style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #ccc', fontSize: '13px' }} />
                         {searchQuery && (
                           <div style={{ marginTop: '5px', maxHeight: '150px', overflowY: 'auto', background: '#fff', border: '1px solid #e2e8f0', borderRadius: '6px' }}>
@@ -1025,6 +1080,7 @@ export default function Home() {
                     <form onSubmit={handleAddGuest}>
                       <div style={{ marginBottom: '10px' }}><label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', marginBottom: '3px' }}>{t.name}</label><input required value={guestData.name} onChange={e => setGuestData({...guestData, name: e.target.value})} style={{ width: '100%', padding: '8px', borderRadius: '4px', border: '1px solid #ccc', fontSize: '13px' }} /></div>
                       <div style={{ marginBottom: '10px' }}><label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', marginBottom: '3px' }}>{t.phone}</label><input required type="tel" value={guestData.phone} onChange={e => setGuestData({...guestData, phone: e.target.value})} style={{ width: '100%', padding: '8px', borderRadius: '4px', border: '1px solid #ccc', fontSize: '13px' }} /></div>
+                      
                       <div style={{ marginBottom: '10px' }}>
                         <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', marginBottom: '3px' }}>{t.zoneL}</label>
                         <select value={guestData.zone} onChange={e => setGuestData({...guestData, zone: e.target.value})} style={{ width: '100%', padding: '8px', borderRadius: '4px', border: '1px solid #ccc', fontSize: '13px' }}>
@@ -1032,6 +1088,7 @@ export default function Home() {
                           <option value="zone4">{t.zone4}</option><option value="zone5">{t.zone5}</option><option value="zone6">{t.zone6}</option>
                         </select>
                       </div>
+
                       <div style={{ marginBottom: '10px' }}><label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', marginBottom: '3px' }}>{t.address}</label><input required value={guestData.address} onChange={e => setGuestData({...guestData, address: e.target.value})} style={{ width: '100%', padding: '8px', borderRadius: '4px', border: '1px solid #ccc', fontSize: '13px' }} /></div>
                       <div style={{ marginBottom: '15px' }}>
                         <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', marginBottom: '3px' }}>{t.rideType}</label>
@@ -1047,6 +1104,7 @@ export default function Home() {
                           <label style={{ fontSize: '12px', display: 'flex', alignItems: 'center', gap: '5px' }}><input type="checkbox" checked={guestData.regSatPraise} onChange={e => setGuestData({...guestData, regSatPraise: e.target.checked})} /> {t.regSatPraise}</label>
                           <label style={{ fontSize: '12px', display: 'flex', alignItems: 'center', gap: '5px' }}><input type="checkbox" checked={guestData.regSunPraise} onChange={e => setGuestData({...guestData, regSunPraise: e.target.checked})} /> {t.regSunPraise}</label>
                         </div>
+                        <p style={{ margin: '8px 0 0 0', fontSize: '11px', color: '#b91c1c', fontWeight: 'bold' }}>{t.praiseNotice}</p>
                       </div>
                       <button type="submit" style={{ width: '100%', padding: '10px', background: '#18181b', color: 'white', borderRadius: '6px', fontWeight: 'bold', border: 'none', cursor: 'pointer' }}>{t.addBtn}</button>
                     </form>
@@ -1139,7 +1197,9 @@ export default function Home() {
                   <div style={{ marginBottom: '15px' }}>
                     <label style={{ display: 'block', fontSize: '13px', fontWeight: 'bold', marginBottom: '5px' }}>이번 주 탑승 형태</label>
                     <select value={applyData.rideType} onChange={e => setApplyData({...applyData, rideType: e.target.value})} style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #ccc' }}>
-                      <option value="Need a Ride">{t.needRide}</option><option value="Can Drive">{t.canDrive}</option><option value="Drive Self">{t.driveSelf}</option>
+                      <option value="Need a Ride">{t.needRide}</option>
+                      <option value="Can Drive">{t.canDrive}</option>
+                      <option value="Drive Self">{t.driveSelf}</option>
                     </select>
                   </div>
                   {applyData.rideType === 'Can Drive' && (
