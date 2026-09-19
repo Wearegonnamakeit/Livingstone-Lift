@@ -60,7 +60,7 @@ const text: Record<string, any> = {
     departed: "Departed", arrived: "Arrived", applyBtn: "1-Click Apply", appliedBtn: "Applied", cancelBtn: "Cancel", noEvent: "No events registered for this date.",
     adminNew: "New Event", adminAssign: "Assign", adminUsers: "Roster", titleL: "Title", dateL: "Date", destL: "Destination", typeL: "Event Type",
     createBtn: "Create Event", creatingBtn: "Creating...", selectEvt: "-- Select Event to Manage --", toEvt: "To Event", fromEvt: "From Event",
-    waitList: "Waiting List", allAssig: "All assigned", cars: "Cars", full: "FULL", mapNav: "Map Navi", dropHere: "Drop here", noDriv: "No drivers available.",
+    waitList: "Waiting List", allAssig: "All assigned", cars: "Cars", full: "FULL / Not enough seats", mapNav: "Map Navi", dropHere: "Drop here", noDriv: "No drivers available.",
     navCal: "Calendar", navProf: "Prof", navGuide: "Guide", guideTitle: "User Guide",
     g1T: "1. Install the App", g1D: "iOS: Safari Share Button > 'Add to Home Screen'\nAndroid: Chrome Menu > 'Add to Home screen'",
     g2T: "2. Ride Application", g2D: "Go to Calendar, select a date, and click '1-Click Apply'.",
@@ -79,10 +79,12 @@ const text: Record<string, any> = {
     zone1: "State St. / Downtown (Hub, Lucky, Cap Square, etc.)", zone2: "The Nick / Southeast (Witte, Sellery, Kohl Center, etc.)",
     zone3: "Union South / Regent (Engineering, Camp Randall, etc.)", zone4: "Hilldale / Sheboygan (Hilldale Mall, West Side Apts)",
     zone5: "Eagle Heights (University Houses, etc.)", zone6: "Other (Any other areas)",
-    editProfile: "Edit Profile", cancelEdit: "Cancel Edit", selectToAssign: "Tap a person, then tap a car to assign.", dailyRoster: "Daily Attendees",
+    editProfile: "Edit Profile", cancelEdit: "Cancel Edit", 
+    selectToAssign: "💡 Tap multiple people, then tap a car to assign them all at once.", 
+    dailyRoster: "Daily Attendees",
     regLabel: "Regular Attendance (Auto-Apply)", regFri: "Friday Worship", regSatPraise: "Sat Praise", regSunPraise: "Sun Praise", regSun: "Sunday Worship",
     praiseNotice: "💡 Praise team members: please check BOTH 'Sun Praise' and 'Sunday Worship'.", quickGuestBtn: "Quick Add Visitor", quickGuestName: "Visitor Name",
-    confirmRemoveApp: "Are you sure you want to completely remove this applicant?", deleteTxt: "Delete"
+    confirmRemoveApp: "Are you sure you want to completely remove this applicant?", deleteTxt: "Delete", deselectAll: "Deselect All"
   },
   ko: {
     appTitle: "Livingstone Lift", loginReq: "앱을 사용하려면 로그인해 주세요.", loginBtn: "구글 계정으로 시작하기",
@@ -94,7 +96,7 @@ const text: Record<string, any> = {
     departed: "출발함", arrived: "도착함", applyBtn: "1클릭 신청", appliedBtn: "신청 완료", cancelBtn: "신청 취소", noEvent: "이 날짜에 등록된 일정이 없습니다.",
     adminNew: "새 일정", adminAssign: "인원 배정", adminUsers: "교인 명단", titleL: "일정 이름", dateL: "날짜", destL: "목적지", typeL: "일정 종류",
     createBtn: "일정 생성", creatingBtn: "생성 중...", selectEvt: "-- 관리할 일정 선택 --", toEvt: "교회로 갈 때 (To)", fromEvt: "집으로 갈 때 (From)",
-    waitList: "대기 명단", allAssig: "배정 완료", cars: "차량 목록", full: "만차", mapNav: "지도 내비", dropHere: "여기로 드래그", noDriv: "가능한 운전자가 없습니다.",
+    waitList: "대기 명단", allAssig: "배정 완료", cars: "차량 목록", full: "만차 / 자리 부족", mapNav: "지도 내비", dropHere: "여기로 드래그", noDriv: "가능한 운전자가 없습니다.",
     navCal: "일정", navProf: "프로필", navGuide: "설명서", guideTitle: "앱 사용 설명서",
     g1T: "1. 앱 설치하기", g1D: "아이폰: Safari 하단 공유 버튼 > '홈 화면에 추가'\n안드로이드: Chrome 우측 상단 메뉴 > '홈 화면에 추가'",
     g2T: "2. 라이드 신청하기", g2D: "일정(Calendar) 탭에서 날짜를 누르고 '1클릭 신청' 버튼을 누르면 신청이 완료됩니다.",
@@ -113,10 +115,12 @@ const text: Record<string, any> = {
     zone1: "State St. / Downtown (허브, 럭키, 캡스퀘어 등)", zone2: "The Nick / Southeast (콜 센터, Witte, Sellery 등)",
     zone3: "Union South / Regent (공대, 캠프 랜들 근처)", zone4: "Hilldale / Sheboygan (힐데일 몰, 셔보이건 애비뉴 등)",
     zone5: "Eagle Heights (이글 하이츠 가족 기숙사)", zone6: "Other (그 외 기타 지역)",
-    editProfile: "프로필 수정", cancelEdit: "수정 취소", selectToAssign: "💡 대기자를 먼저 터치한 후, 차량을 터치해 배정하세요.", dailyRoster: "해당 날짜 신청자 명단",
+    editProfile: "프로필 수정", cancelEdit: "수정 취소", 
+    selectToAssign: "💡 대기자를 여러 명 터치한 후, 차량을 터치해 한 번에 배정하세요.", 
+    dailyRoster: "해당 날짜 신청자 명단",
     regLabel: "정기 참석 자동 신청", regFri: "금요예배", regSatPraise: "토요 찬양팀", regSunPraise: "주일 찬양팀", regSun: "주일예배",
     praiseNotice: "💡 주일 찬양팀 봉사자는 '주일 찬양팀'과 '주일예배'를 둘 다 체크해 주세요.", quickGuestBtn: "방문자 퀵추가", quickGuestName: "방문자 이름",
-    confirmRemoveApp: "이 신청자를 명단에서 완전히 삭제하시겠습니까?", deleteTxt: "삭제"
+    confirmRemoveApp: "이 신청자를 명단에서 완전히 삭제하시겠습니까?", deleteTxt: "삭제", deselectAll: "선택 해제"
   }
 };
 
@@ -166,7 +170,8 @@ export default function Home() {
   const [allUsersList, setAllUsersList] = useState<(UserProfile & {id: string})[]>([]);
   const [rideDirection, setRideDirection] = useState<'to' | 'from'>('to');
   
-  const [selectedRiderId, setSelectedRiderId] = useState<string | null>(null);
+  // 🔥 다중 선택을 위해 배열(Array)로 변경
+  const [selectedRiderIds, setSelectedRiderIds] = useState<string[]>([]);
   const [customMsg, setCustomMsg] = useState<Record<string, string>>({});
   const prevAppsRef = useRef<Record<string, Application>>({});
 
@@ -352,7 +357,7 @@ export default function Home() {
       unsubAdmin = onSnapshot(q, (snapshot) => {
         setEventAttendees(snapshot.docs.map(docSnap => ({ ...docSnap.data(), id: docSnap.id })) as Application[]);
       });
-      setSelectedRiderId(null);
+      setSelectedRiderIds([]); // 일정 변경 시 선택 해제
     } else setEventAttendees([]);
     return () => { if (unsubAdmin) unsubAdmin(); };
   }, [adminSelectedEventId]);
@@ -567,12 +572,12 @@ export default function Home() {
 
   const handleCancelApplication = async (eventId: string) => { if (user) await deleteDoc(doc(db, 'applications', `${eventId}_${user.uid}`)); };
 
-  // 관리자용 신청자 개별 삭제 기능
   const handleRemoveApplication = async (appId: string) => {
     if (confirm(t.confirmRemoveApp)) {
       try {
         await deleteDoc(doc(db, 'applications', appId));
-        if (selectedRiderId === appId) setSelectedRiderId(null);
+        // 삭제된 아이디가 선택된 명단에 있었다면 제거
+        setSelectedRiderIds(prev => prev.filter(id => id !== appId));
       } catch (error) { console.error(error); }
     }
   };
@@ -621,19 +626,27 @@ export default function Home() {
     }
   };
 
+  // 🔥 다중 일괄 배정 로직 (선택된 모든 탑승자를 차량에 넣음)
   const handleAssignToCar = async (carId: string, capacityStr?: string) => {
-    if (!selectedRiderId) return;
+    if (selectedRiderIds.length === 0) return;
+    
     if (carId && capacityStr) {
       const limit = parseInt(capacityStr) || 4;
-      if (eventAttendees.filter(a => rideDirection === 'to' ? a.carIdTo === carId : a.carIdFrom === carId).length >= limit) {
+      const currentCount = eventAttendees.filter(a => rideDirection === 'to' ? a.carIdTo === carId : a.carIdFrom === carId).length;
+      if (currentCount + selectedRiderIds.length > limit) {
         alert(t.full); return;
       }
     }
-    await updateDoc(doc(db, 'applications', selectedRiderId), { [rideDirection === 'to' ? 'carIdTo' : 'carIdFrom']: carId });
-    const pSnap = await getDoc(doc(db, 'applications', selectedRiderId));
-    const pUserId = pSnap.data()?.userId;
-    if (pUserId && !pUserId.startsWith('quick_')) await sendPushToUser(pUserId, t.assignedTitle, t.assignedBody);
-    setSelectedRiderId(null); 
+
+    const updatePromises = selectedRiderIds.map(async (riderId) => {
+      await updateDoc(doc(db, 'applications', riderId), { [rideDirection === 'to' ? 'carIdTo' : 'carIdFrom']: carId });
+      const pSnap = await getDoc(doc(db, 'applications', riderId));
+      const pUserId = pSnap.data()?.userId;
+      if (pUserId && !pUserId.startsWith('quick_')) await sendPushToUser(pUserId, t.assignedTitle, t.assignedBody);
+    });
+
+    await Promise.all(updatePromises);
+    setSelectedRiderIds([]); // 배정 후 선택 초기화
   };
 
   const handleRemoveFromCar = async (passengerId: string) => {
@@ -654,7 +667,9 @@ export default function Home() {
   const days = Array.from({ length: new Date(year, month + 1, 0).getDate() }, (_, i) => i + 1);
   const monthNames = lang === 'ko' ? ["1월","2월","3월","4월","5월","6월","7월","8월","9월","10월","11월","12월"] : ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
   
-  const drivers = eventAttendees.filter(a => a.role === 'driver');
+  const drivers = eventAttendees
+    .filter(a => a.role === 'driver')
+    .sort((a, b) => (a.isVan === b.isVan ? 0 : a.isVan ? -1 : 1));
   const riders = eventAttendees.filter(a => a.role === 'rider');
   const unassignedRiders = riders.filter(r => rideDirection === 'to' ? r.carIdTo === null : r.carIdFrom === null);
   
@@ -728,7 +743,6 @@ export default function Home() {
                 </>
               )}
               
-              {/* 정기 참석 옵션 및 찬양팀 안내 문구 */}
               <div style={{ background: '#f0fdf4', padding: '15px', borderRadius: '8px', marginBottom: '20px', border: '1px solid #bbf7d0' }}>
                 <label style={{ display: 'block', fontSize: '13px', fontWeight: 'bold', marginBottom: '10px', color: '#166534' }}>{t.regLabel}</label>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
@@ -947,7 +961,7 @@ export default function Home() {
                           <button onClick={() => setIsAddingQuickGuest(!isAddingQuickGuest)} style={{ padding: '4px 8px', background: '#e2e8f0', border: 'none', borderRadius: '4px', fontSize: '11px', fontWeight: 'bold', cursor: 'pointer' }}>{t.quickGuestBtn}</button>
                         </div>
 
-                        {/* 방문자 퀵 추가 폼 (운전자 옵션 포함) */}
+                        {/* 방문자 퀵 추가 폼 */}
                         {isAddingQuickGuest && (
                           <form onSubmit={handleAddQuickGuest} style={{ display: 'flex', flexDirection: 'column', gap: '5px', marginBottom: '15px', background: '#fff', padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1' }}>
                             <div style={{ display: 'flex', gap: '5px' }}>
@@ -975,16 +989,17 @@ export default function Home() {
                           </form>
                         )}
 
+                        {/* 🔥 대소문자 무시 검색 적용 */}
                         <input type="text" placeholder={t.searchPlaceholder} value={searchQuery} onChange={e => setSearchQuery(e.target.value)} style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #ccc', fontSize: '13px' }} />
                         {searchQuery && (
                           <div style={{ marginTop: '5px', maxHeight: '150px', overflowY: 'auto', background: '#fff', border: '1px solid #e2e8f0', borderRadius: '6px' }}>
-                            {allUsersList.filter(u => u.name.includes(searchQuery)).map(u => (
+                            {allUsersList.filter(u => u.name.toLowerCase().includes(searchQuery.toLowerCase())).map(u => (
                               <div key={u.id} onClick={() => handleProxyApply(u)} style={{ padding: '10px', borderBottom: '1px solid #f1f5f9', cursor: 'pointer', fontSize: '13px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                 <span><strong>{u.name}</strong> <span style={{fontSize: '11px', color: '#64748b'}}>({(t[u.zone || 'zone6'] || '').split(' ')[0]})</span></span>
                                 <span style={{ color: '#2563eb', fontWeight: 'bold', fontSize: '11px', background: '#dbeafe', padding: '4px 8px', borderRadius: '4px' }}>{t.addBtn}</span>
                               </div>
                             ))}
-                            {allUsersList.filter(u => u.name.includes(searchQuery)).length === 0 && <div style={{ padding: '10px', fontSize: '13px', color: '#94a3b8' }}>{t.noResult}</div>}
+                            {allUsersList.filter(u => u.name.toLowerCase().includes(searchQuery.toLowerCase())).length === 0 && <div style={{ padding: '10px', fontSize: '13px', color: '#94a3b8' }}>{t.noResult}</div>}
                           </div>
                         )}
                       </div>
@@ -1007,7 +1022,15 @@ export default function Home() {
 
                     <div style={{ background: '#fff', padding: '15px', borderRadius: '12px', border: '1px solid #e4e4e7', marginBottom: '20px', minHeight: '100px' }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
-                        <h4 style={{ margin: 0 }}>{t.waitList} ({unassignedRiders.length})</h4>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                          <h4 style={{ margin: 0 }}>{t.waitList} ({unassignedRiders.length})</h4>
+                          {/* 🔥 다중 선택 해제 버튼 추가 */}
+                          {selectedRiderIds.length > 0 && (
+                            <span onClick={() => setSelectedRiderIds([])} style={{ fontSize: '11px', color: '#ef4444', cursor: 'pointer', fontWeight: 'bold', marginLeft: '10px' }}>
+                              [{t.deselectAll} {selectedRiderIds.length}]
+                            </span>
+                          )}
+                        </div>
                         <button onClick={() => setSortByAddress(!sortByAddress)} style={{ padding: '6px 10px', fontSize: '11px', fontWeight: 'bold', borderRadius: '6px', border: '1px solid #cbd5e1', background: '#f8fafc', cursor: 'pointer' }}>
                           {sortByAddress ? t.sortByName : t.sortByAddr}
                         </button>
@@ -1017,9 +1040,15 @@ export default function Home() {
                         {sortedUnassignedRiders.map(r => {
                           const zColor = zoneColors[r.zone || 'zone6'];
                           const zNameShort = (t[r.zone || 'zone6'] || '').split(' (')[0];
-                          const isSelected = selectedRiderId === r.id;
+                          // 🔥 다중 선택 확인
+                          const isSelected = selectedRiderIds.includes(r.id);
                           return (
-                            <div key={r.id} onClick={() => setSelectedRiderId(isSelected ? null : r.id)} style={{ padding: '8px 12px', background: isSelected ? '#eff6ff' : '#f8fafc', border: isSelected ? '2px solid #2563eb' : '1px solid #cbd5e1', borderLeft: isSelected ? '5px solid #2563eb' : `5px solid ${zColor}`, borderRadius: '8px', fontSize: '13px', fontWeight: 'bold', cursor: 'pointer', textAlign: 'center', transform: isSelected ? 'scale(1.05)' : 'scale(1)', transition: 'all 0.1s' }}>
+                            <div 
+                              key={r.id} 
+                              // 🔥 터치 시 배열에 넣거나 빼기
+                              onClick={() => setSelectedRiderIds(prev => prev.includes(r.id) ? prev.filter(id => id !== r.id) : [...prev, r.id])} 
+                              style={{ padding: '8px 12px', background: isSelected ? '#eff6ff' : '#f8fafc', border: isSelected ? '2px solid #2563eb' : '1px solid #cbd5e1', borderLeft: isSelected ? '5px solid #2563eb' : `5px solid ${zColor}`, borderRadius: '8px', fontSize: '13px', fontWeight: 'bold', cursor: 'pointer', textAlign: 'center', transform: isSelected ? 'scale(1.05)' : 'scale(1)', transition: 'all 0.1s' }}
+                            >
                               <div style={{ fontSize: '10px', color: isSelected ? '#2563eb' : zColor, marginBottom: '2px' }}>{zNameShort}</div>
                               <div>{r.name}</div>
                               {sortByAddress && <div style={{ fontSize: '10px', color: '#64748b', fontWeight: 'normal', marginTop: '4px', maxWidth: '100px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.address}</div>}
@@ -1034,8 +1063,15 @@ export default function Home() {
                       {drivers.map(driver => {
                         const passengers = riders.filter(r => rideDirection === 'to' ? r.carIdTo === driver.id : r.carIdFrom === driver.id);
                         const isFull = passengers.length >= parseInt(driver.capacity || '4');
+                        const hasSelection = selectedRiderIds.length > 0;
+
                         return (
-                          <div key={driver.id} onClick={() => handleAssignToCar(driver.id, driver.capacity)} style={{ background: isFull ? '#fff1f2' : (selectedRiderId ? '#ecfdf5' : '#fff'), padding: '15px', borderRadius: '12px', border: isFull ? '2px solid #fecaca' : (selectedRiderId ? '2px dashed #10b981' : '1px solid #e4e4e7'), position: 'relative', cursor: selectedRiderId ? 'pointer' : 'default' }}>
+                          <div 
+                            key={driver.id} 
+                            onClick={() => handleAssignToCar(driver.id, driver.capacity)} 
+                            // 🔥 선택된 사람이 있으면 테두리가 초록색 점선으로 빛남
+                            style={{ background: isFull ? '#fff1f2' : (hasSelection ? '#ecfdf5' : '#fff'), padding: '15px', borderRadius: '12px', border: isFull ? '2px solid #fecaca' : (hasSelection ? '2px dashed #10b981' : '1px solid #e4e4e7'), position: 'relative', cursor: hasSelection ? 'pointer' : 'default' }}
+                          >
                             {isFull && <div style={{ position: 'absolute', right: '-25px', top: '15px', background: '#ef4444', color: '#fff', fontSize: '11px', fontWeight: 'bold', padding: '4px 30px', transform: 'rotate(45deg)' }}>{t.full}</div>}
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
                               <div style={{ fontWeight: 'bold' }}>{driver.isVan ? <span style={{ color: '#2563eb' }}>[Van] </span> : 'Car: '}{driver.name}</div>
