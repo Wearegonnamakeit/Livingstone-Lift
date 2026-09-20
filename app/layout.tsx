@@ -13,7 +13,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Livingstone Lift",
+  title: "Livingstone Lift", 
   description: "Church Ride Sharing Application",
   manifest: '/manifest.json',
   appleWebApp: {

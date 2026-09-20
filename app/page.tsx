@@ -47,6 +47,7 @@ interface Application {
   statusTo: string;
   statusFrom: string;
   isVan?: boolean;
+  appliedAt?: any;
 }
 
 const text: Record<string, any> = {
@@ -1106,6 +1107,7 @@ export default function Home() {
                       <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px', minWidth: '400px' }}>
                         <thead>
                           <tr style={{ background: '#f4f4f5', borderBottom: '2px solid #e4e4e7' }}>
+                            <th style={{ padding: '10px', textAlign: 'left' }}>{lang === 'ko' ? '신청 시간' : 'Time'}</th>
                             <th style={{ padding: '10px', textAlign: 'left' }}>{t.name}</th>
                             <th style={{ padding: '10px', textAlign: 'left' }}>{t.rideType}</th>
                             <th style={{ padding: '10px', textAlign: 'left' }}>Zone</th>
@@ -1114,19 +1116,28 @@ export default function Home() {
                           </tr>
                         </thead>
                         <tbody>
-                          {eventAttendees.map(u => (
-                            <tr key={u.id} style={{ borderBottom: '1px solid #e4e4e7' }}>
-                              <td style={{ padding: '10px', fontWeight: 'bold' }}>{u.name}</td>
-                              <td style={{ padding: '10px', color: u.role === 'driver' ? '#2563eb' : '#64748b', fontWeight: 'bold' }}>{u.rideType}</td>
-                              <td style={{ padding: '10px', color: zoneColors[u.zone || 'zone6'], fontWeight: 'bold' }}>{(t[u.zone || 'zone6'] || '').split(' ')[0]}</td>
-                              <td style={{ padding: '10px' }}><a href={`tel:${u.phone}`} style={{ color: '#2563eb', textDecoration: 'none' }}>{u.phone}</a></td>
-                              <td style={{ padding: '10px', textAlign: 'center' }}>
-                                <button onClick={() => handleRemoveApplication(u.id)} style={{ padding: '4px 8px', background: '#fee2e2', color: '#ef4444', border: 'none', borderRadius: '4px', fontSize: '11px', fontWeight: 'bold', cursor: 'pointer' }}>
-                                  {t.deleteTxt}
-                                </button>
-                              </td>
-                            </tr>
-                          ))}
+                          {[...eventAttendees]
+                            .sort((a, b) => (b.appliedAt?.seconds || Infinity) - (a.appliedAt?.seconds || Infinity))
+                            .map(u => {
+                              const timeStr = u.appliedAt 
+                                ? new Date(u.appliedAt.seconds * 1000).toLocaleString('ko-KR', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) 
+                                : (lang === 'ko' ? '방금 전' : 'Just now');
+
+                              return (
+                                <tr key={u.id} style={{ borderBottom: '1px solid #e4e4e7' }}>
+                                  <td style={{ padding: '10px', color: '#64748b', fontSize: '11px' }}>{timeStr}</td>
+                                  <td style={{ padding: '10px', fontWeight: 'bold' }}>{u.name}</td>
+                                  <td style={{ padding: '10px', color: u.role === 'driver' ? '#2563eb' : '#64748b', fontWeight: 'bold' }}>{u.rideType}</td>
+                                  <td style={{ padding: '10px', color: zoneColors[u.zone || 'zone6'], fontWeight: 'bold' }}>{(t[u.zone || 'zone6'] || '').split(' ')[0]}</td>
+                                  <td style={{ padding: '10px' }}><a href={`tel:${u.phone}`} style={{ color: '#2563eb', textDecoration: 'none' }}>{u.phone}</a></td>
+                                  <td style={{ padding: '10px', textAlign: 'center' }}>
+                                    <button onClick={() => handleRemoveApplication(u.id)} style={{ padding: '4px 8px', background: '#fee2e2', color: '#ef4444', border: 'none', borderRadius: '4px', fontSize: '11px', fontWeight: 'bold', cursor: 'pointer' }}>
+                                      {t.deleteTxt}
+                                    </button>
+                                  </td>
+                                </tr>
+                              );
+                            })}
                         </tbody>
                       </table>
                     </div>
