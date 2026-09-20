@@ -16,6 +16,11 @@ export const metadata: Metadata = {
   title: "Livingstone Lift",
   description: "Church Ride Sharing Application",
   manifest: '/manifest.json',
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'default',
+    title: 'Livingstone Lift',
+  },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
