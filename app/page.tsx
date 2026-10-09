@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { signInWithPopup, signOut, onAuthStateChanged, User } from 'firebase/auth';
-import { doc, getDoc, setDoc, collection, addDoc, getDocs, query, orderBy, serverTimestamp, deleteDoc, where, updateDoc, onSnapshot } from 'firebase/firestore';
+import { doc, getDoc, setDoc, collection, addDoc, getDocs, query, orderBy, serverTimestamp, deleteDoc, where, updateDoc, onSnapshot, arrayUnion, arrayRemove } from 'firebase/firestore';
 import { auth, googleProvider, db, messaging, getToken, onMessage } from '../lib/firebase';
 
 interface UserProfile {
@@ -14,7 +14,8 @@ interface UserProfile {
   capacity: string;
   isAdmin: boolean;
   isVan?: boolean;
-  fcmToken?: string;
+  fcmToken?: string; // 예전 방식(기기 1대) - 호환용으로만 남겨둠
+  fcmTokens?: string[]; // 기기별 알림 주소 (폰 + PC 등 여러 대)
   isGuest?: boolean;
   regFri?: boolean;
   regSatPraise?: boolean;
@@ -50,6 +51,8 @@ interface Application {
   appliedAt?: any;
 }
 
+const VAPID_KEY = 'BJk6feu2WhkttIgPvgw977NbtMd_1RfEfMFqpYECAZgSxeeqSVmGRXnkYDABCXFMWcN9-fEnGUXStxjSX_QOvcU';
+
 const text: Record<string, any> = {
   en: {
     appTitle: "Livingstone Lift", loginReq: "Please log in to use the application.", loginBtn: "Sign in with Google",
@@ -69,7 +72,8 @@ const text: Record<string, any> = {
     loading: "Loading...", msgPlaceholder: "Type message...", sendBtn: "Send", vehicleType: "Vehicle", personalCar: "Personal Car", churchVan: "Church Van (15 seats)", seats: "seats",
     refresh: "Refresh", statusUpdated: "Status updated.", msgSent: "Message sent.", refreshed: "Data refreshed successfully.",
     assignedTitle: "Ride Assigned", assignedBody: "A driver has been assigned to you.", alertTitle: "Driver Update", newMsg: "New Message",
-    pushEnabled: "[ON] Push Notifications (Disable)", pushDisabled: "Enable Push Notifications", disablePushConfirm: "Do you want to disable push notifications?",
+    pushEnabled: "[ON] Push Notifications (Disable)", pushDisabled: "Enable Push Notifications", disablePushConfirm: "Disable push notifications on this device?",
+    dbErrPermTitle: "⚠️ Cannot access the server (permission denied)", dbErrPermBody: "Your data has NOT been deleted. The Firestore security rules are blocking access. Please tell the administrator.", dbErrTitle: "⚠️ Could not load data", dbErrBody: "Check your internet connection and try again. Your data has not been deleted.", retryBtn: "Retry",
     deleteEvt: "Delete Event", confirmDeleteEvt: "Are you sure you want to delete this event?",
     statsTxt: "Total Riders", statsSeats: "Total Seats", statsAvail: "Seats Available", statsShort: "Seat Shortage",
     addGuestBtn: "Add Offline User", proxyApplyTitle: "Proxy Apply (Search)", searchPlaceholder: "Search by name...", addBtn: "Add", noResult: "No results found.",
@@ -105,7 +109,8 @@ const text: Record<string, any> = {
     loading: "로딩 중...", msgPlaceholder: "메시지 직접 입력...", sendBtn: "전송", vehicleType: "운행 차량", personalCar: "개인 자가용", churchVan: "교회 밴 (15인승)", seats: "인승",
     refresh: "새로고침", statusUpdated: "상태가 전송되었습니다.", msgSent: "메시지가 전송되었습니다.", refreshed: "최신 정보로 새로고침 되었습니다.",
     assignedTitle: "배차 완료", assignedBody: "차량이 성공적으로 배정되었습니다.", alertTitle: "운전자 상태 업데이트", newMsg: "새 메시지",
-    pushEnabled: "[ON] 푸시 알림 켜짐 (끄기)", pushDisabled: "푸시 알림 켜기", disablePushConfirm: "푸시 알림을 끄시겠습니까?",
+    pushEnabled: "[ON] 푸시 알림 켜짐 (끄기)", pushDisabled: "푸시 알림 켜기", disablePushConfirm: "이 기기의 푸시 알림을 끄시겠습니까?",
+    dbErrPermTitle: "⚠️ 서버 접근 권한 오류", dbErrPermBody: "데이터가 지워진 것이 아닙니다. 서버(Firestore) 보안 규칙이 접근을 막고 있습니다. 관리자에게 알려주세요.", dbErrTitle: "⚠️ 데이터를 불러오지 못했습니다", dbErrBody: "인터넷 연결을 확인한 뒤 다시 시도해 주세요. 데이터가 지워진 것은 아닙니다.", retryBtn: "다시 시도",
     deleteEvt: "일정 삭제", confirmDeleteEvt: "정말로 이 일정을 삭제하시겠습니까? 신청 내역도 모두 삭제됩니다.",
     statsTxt: "신청 인원", statsSeats: "전체 좌석", statsAvail: "남은 자리", statsShort: "자리 부족",
     addGuestBtn: "수동 교인 추가", proxyApplyTitle: "대리 신청 (이름 검색)", searchPlaceholder: "이름을 입력하세요...", addBtn: "추가", noResult: "검색 결과가 없습니다.",
@@ -193,6 +198,18 @@ export default function Home() {
   const [applyData, setApplyData] = useState({ rideType: '', capacity: '', isVan: false });
   const [sortByAddress, setSortByAddress] = useState(true);
 
+  // 서버 오류 상태: 오류를 화면에 표시해서 '데이터가 사라진 것처럼' 보이지 않게 함
+  const [dbError, setDbError] = useState<'permission' | 'other' | null>(null);
+  const [myDeviceToken, setMyDeviceToken] = useState<string>('');
+  const reportDbError = (error: any) => {
+    console.error(error);
+    setDbError(error?.code === 'permission-denied' ? 'permission' : 'other');
+  };
+
+  useEffect(() => {
+    try { setMyDeviceToken(localStorage.getItem('ll_fcm_token') || ''); } catch {}
+  }, []);
+
   const canManage = profile?.isAdmin || profile?.rideType === 'Can Drive';
 
   useEffect(() => {
@@ -248,7 +265,7 @@ export default function Home() {
         setUserApplications(appliedMap);
         setDriverDetails(driversMap);
         setMyPassengers(passengersArr);
-      });
+      }, reportDbError);
     };
 
     const unsubscribeAuth = onAuthStateChanged(auth, async (currentUser) => {
@@ -267,11 +284,14 @@ export default function Home() {
 
   const togglePushNotification = async () => {
     if (!user || !profile) return;
-    if (profile.fcmToken) {
+    // 이 기기가 이미 등록되어 있으면 -> 이 기기만 알림 해제 (다른 기기는 그대로)
+    if (myDeviceToken && (profile.fcmTokens || []).includes(myDeviceToken)) {
       if (confirm(t.disablePushConfirm)) {
         try {
-          await updateDoc(doc(db, 'users', user.uid), { fcmToken: '' });
-          setProfile({ ...profile, fcmToken: '' });
+          await updateDoc(doc(db, 'users', user.uid), { fcmTokens: arrayRemove(myDeviceToken) });
+          setProfile({ ...profile, fcmTokens: (profile.fcmTokens || []).filter(tk => tk !== myDeviceToken) });
+          try { localStorage.removeItem('ll_fcm_token'); } catch {}
+          setMyDeviceToken('');
         } catch (error) { console.error(error); }
       }
       return;
@@ -284,13 +304,37 @@ export default function Home() {
     try {
       const permission = await Notification.requestPermission();
       if (permission === 'granted') {
-        const token = await getToken(messaging, { vapidKey: 'BJk6feu2WhkttIgPvgw977NbtMd_1RfEfMFqpYECAZgSxeeqSVmGRXnkYDABCXFMWcN9-fEnGUXStxjSX_QOvcU' });
+        const token = await getToken(messaging, { vapidKey: VAPID_KEY });
         if (token) {
-          await updateDoc(doc(db, 'users', user.uid), { fcmToken: token });
-          setProfile({ ...profile, fcmToken: token });
+          // 덮어쓰지 않고 '추가' -> 폰과 PC 모두 알림을 받음
+          await updateDoc(doc(db, 'users', user.uid), { fcmTokens: arrayUnion(token) });
+          setProfile({ ...profile, fcmTokens: Array.from(new Set([...(profile.fcmTokens || []), token])) });
+          try { localStorage.setItem('ll_fcm_token', token); } catch {}
+          setMyDeviceToken(token);
         }
       } else alert(lang === 'ko' ? '알림 권한이 거부되었습니다. 기기 설정에서 알림을 허용해주세요.' : 'Notification permission denied.');
     } catch (error) { console.error(error); alert(lang === 'ko' ? '알림 설정 중 오류가 발생했습니다.' : 'Error setting up notifications.'); }
+  };
+
+  // 앱을 열 때마다 이 기기의 알림 주소가 바뀌었는지 확인해서 자동으로 갱신
+  const refreshDeviceToken = async (uid: string, data: UserProfile) => {
+    if (typeof window === 'undefined' || !messaging || !('Notification' in window) || Notification.permission !== 'granted') return;
+    let saved = '';
+    try { saved = localStorage.getItem('ll_fcm_token') || ''; } catch {}
+    if (!saved) return; // 이 기기에서 알림을 켠 적이 없으면 건드리지 않음
+    try {
+      const token = await getToken(messaging, { vapidKey: VAPID_KEY });
+      if (!token) return;
+      const list = data.fcmTokens || [];
+      if (token !== saved || !list.includes(token)) {
+        const updates: any = { fcmTokens: arrayUnion(token) };
+        await updateDoc(doc(db, 'users', uid), updates);
+        if (token !== saved && list.includes(saved)) await updateDoc(doc(db, 'users', uid), { fcmTokens: arrayRemove(saved) });
+        try { localStorage.setItem('ll_fcm_token', token); } catch {}
+        setMyDeviceToken(token);
+        setProfile(prev => prev ? { ...prev, fcmTokens: Array.from(new Set([...(prev.fcmTokens || []).filter(tk => tk !== saved), token])) } : prev);
+      }
+    } catch (error) { console.error(error); }
   };
 
   const fetchUserProfile = async (uid: string) => {
@@ -304,8 +348,9 @@ export default function Home() {
           zone: data.zone || 'zone6', rideType: data.rideType || 'Need a Ride', capacity: data.capacity || '4', isVan: data.isVan || false,
           regFri: data.regFri || false, regSatPraise: data.regSatPraise || false, regSunPraise: data.regSunPraise || false, regSun: data.regSun || false
         });
+        refreshDeviceToken(uid, data);
       }
-    } catch (error) { console.error(error); } finally { setLoading(false); }
+    } catch (error) { reportDbError(error); } finally { setLoading(false); }
   };
 
   const fetchEvents = async () => {
@@ -313,7 +358,7 @@ export default function Home() {
       const q = query(collection(db, 'events'), orderBy('date', 'asc'));
       const querySnapshot = await getDocs(q);
       setEvents(querySnapshot.docs.map(docSnap => ({ ...docSnap.data(), id: docSnap.id })) as ChurchEvent[]);
-    } catch (error) { console.error(error); }
+    } catch (error) { reportDbError(error); }
   };
 
   const fetchAllUsers = async () => {
@@ -357,7 +402,7 @@ export default function Home() {
       const q = query(collection(db, 'applications'), where('eventId', '==', adminSelectedEventId));
       unsubAdmin = onSnapshot(q, (snapshot) => {
         setEventAttendees(snapshot.docs.map(docSnap => ({ ...docSnap.data(), id: docSnap.id })) as Application[]);
-      });
+      }, reportDbError);
       setSelectedRiderIds([]); // 일정 변경 시 선택 해제
     } else setEventAttendees([]);
     return () => { if (unsubAdmin) unsubAdmin(); };
@@ -372,7 +417,7 @@ export default function Home() {
   const handleSaveProfile = async (e: React.FormEvent) => {
     e.preventDefault(); if (!user) return; setSaving(true);
     try {
-      const newProfile = { ...formData, isAdmin: profile?.isAdmin || false, fcmToken: profile?.fcmToken || '' };
+      const newProfile = { ...formData, isAdmin: profile?.isAdmin || false, fcmToken: profile?.fcmToken || '', fcmTokens: profile?.fcmTokens || [] };
       await setDoc(doc(db, 'users', user.uid), newProfile);
       setProfile(newProfile as UserProfile);
       setIsEditingProfile(false);
@@ -400,7 +445,7 @@ export default function Home() {
     e.preventDefault();
     if (!profile?.isAdmin) return;
     try {
-      const docRef = await addDoc(collection(db, 'users'), { ...guestData, isAdmin: false, isGuest: true, fcmToken: '' });
+      const docRef = await addDoc(collection(db, 'users'), { ...guestData, isAdmin: false, isGuest: true, fcmToken: '', fcmTokens: [] });
       
       const evQ = query(collection(db, 'events'));
       const evSnap = await getDocs(evQ);
@@ -594,9 +639,8 @@ export default function Home() {
 
   const sendPushToUser = async (targetUserId: string, title: string, body: string) => {
     try {
-      const snap = await getDoc(doc(db, 'users', targetUserId));
-      const token = snap.data()?.fcmToken;
-      if (token) await fetch('/api/send-notification', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ token, title, body }) });
+      // 서버가 그 사람의 모든 기기(폰, PC 등)로 알림을 보냄
+      await fetch('/api/send-notification', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ userId: targetUserId, title, body }) });
     } catch (error) { console.error("Push failed", error); }
   };
 
@@ -684,7 +728,7 @@ export default function Home() {
     return (a.name || '').localeCompare(b.name || '');
   });
 
-  const hasPushEnabled = !!profile?.fcmToken;
+  const hasPushEnabled = !!myDeviceToken && (profile?.fcmTokens || []).includes(myDeviceToken);
   const totalRiders = riders.length;
   const totalSeats = drivers.reduce((sum, d) => sum + parseInt(d.capacity || '4'), 0);
   const availableSeats = totalSeats - totalRiders;
@@ -712,6 +756,13 @@ export default function Home() {
           <div style={{ background: '#ffffff', padding: '30px', borderRadius: '12px', textAlign: 'center' }}>
             <p style={{ marginBottom: '20px' }}>{t.loginReq}</p>
             <button onClick={handleLogin} style={{ width: '100%', padding: '14px', background: '#3b82f6', color: 'white', borderRadius: '8px', fontWeight: 'bold', border: 'none', cursor: 'pointer' }}>{t.loginBtn}</button>
+          </div>
+        ) : dbError ? (
+          // ==================== SERVER ERROR (데이터가 빈 것처럼 보이지 않게) ====================
+          <div style={{ background: '#fef2f2', border: '1px solid #fecaca', padding: '25px', borderRadius: '12px', textAlign: 'center' }}>
+            <h2 style={{ margin: '0 0 10px 0', fontSize: '17px', color: '#b91c1c' }}>{dbError === 'permission' ? t.dbErrPermTitle : t.dbErrTitle}</h2>
+            <p style={{ margin: '0 0 20px 0', fontSize: '14px', color: '#7f1d1d', lineHeight: 1.5 }}>{dbError === 'permission' ? t.dbErrPermBody : t.dbErrBody}</p>
+            <button onClick={handleRefresh} style={{ width: '100%', padding: '12px', background: '#ef4444', color: 'white', border: 'none', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer' }}>{t.retryBtn}</button>
           </div>
         ) : !profile || isEditingProfile ? (
           // ==================== PROFILE CREATION / EDITING ====================
@@ -1314,4 +1365,4 @@ export default function Home() {
       )}
     </div>
   );
-}
+}
