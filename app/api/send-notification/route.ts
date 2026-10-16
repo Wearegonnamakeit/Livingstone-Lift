@@ -3,18 +3,17 @@ import { getApps, initializeApp, cert } from 'firebase-admin/app';
 import { getMessaging } from 'firebase-admin/messaging';
 import { getFirestore, FieldValue } from 'firebase-admin/firestore';
 
-const projectId = process.env.FIREBASE_PROJECT_ID || '';
-const clientEmail = process.env.FIREBASE_CLIENT_EMAIL || '';
-const privateKey = process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n') || '';
-
-if (!getApps().length) {
-  initializeApp({
-    credential: cert({
-      projectId,
-      clientEmail,
-      privateKey,
-    }),
-  });
+// 서버 인증 정보는 '알림을 실제로 보낼 때' 읽음.
+// (빌드할 때 바로 읽으면, 환경변수가 없는 내 컴퓨터에서 npm run build가 실패함)
+function ensureAdminApp() {
+  if (getApps().length) return;
+  const projectId = process.env.FIREBASE_PROJECT_ID;
+  const clientEmail = process.env.FIREBASE_CLIENT_EMAIL;
+  const privateKey = process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n');
+  if (!projectId || !clientEmail || !privateKey) {
+    throw new Error('Missing FIREBASE_PROJECT_ID / FIREBASE_CLIENT_EMAIL / FIREBASE_PRIVATE_KEY environment variables');
+  }
+  initializeApp({ credential: cert({ projectId, clientEmail, privateKey }) });
 }
 
 // 더 이상 쓸 수 없는 알림 주소(앱 삭제, 브라우저 데이터 삭제 등)를 나타내는 오류 코드
@@ -26,6 +25,7 @@ const DEAD_TOKEN_CODES = new Set([
 
 export async function POST(request: Request) {
   try {
+    ensureAdminApp();
     const { userId, title, body } = await request.json();
     if (!userId) return NextResponse.json({ error: 'No userId provided' }, { status: 400 });
 

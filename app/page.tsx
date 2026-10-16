@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { signInWithPopup, signOut, onAuthStateChanged, User } from 'firebase/auth';
-import { doc, getDoc, setDoc, collection, addDoc, getDocs, query, orderBy, serverTimestamp, deleteDoc, where, updateDoc, onSnapshot, arrayUnion, arrayRemove } from 'firebase/firestore';
+import { doc, getDoc, setDoc, collection, addDoc, getDocs, query, orderBy, serverTimestamp, deleteDoc, where, updateDoc, onSnapshot, arrayUnion, arrayRemove, writeBatch } from 'firebase/firestore';
 import { auth, googleProvider, db, messaging, getToken, onMessage } from '../lib/firebase';
 
 interface UserProfile {
@@ -370,30 +370,73 @@ export default function Home() {
     } catch (error) { console.error(error); }
   };
 
-  const autoEnrollFutureEvents = async (uid: string, data: any, latestEvents: ChurchEvent[]) => {
+  // 이 일정이 이 사람의 '정기 참석' 항목에 해당하는지
+  const isRegularFor = (ev: ChurchEvent, u: any) => {
+    const title = ev.title || '';
+    if ((title.includes('금요') || title.includes('Friday')) && u.regFri) return true;
+    if ((title.includes('토요') || title.includes('Saturday')) && u.regSatPraise) return true;
+    if ((title.includes('12 PM') || title.includes('Early')) && u.regSunPraise) return true;
+    if ((title.includes('주일예배') || title.includes('Sunday Worship')) && u.regSun) return true;
+    return false;
+  };
+
+  // 정기 참석자들을 앞으로의 일정에 한꺼번에 자동 신청
+  // - 이미 신청된 사람은 건드리지 않음 (배정 정보 보존)
+  // - 한 사람의 정보가 비어 있어도 전체가 멈추지 않도록 기본값을 채움
+  // - 수백 건도 몇 초 안에 끝나도록 한 번에 묶어서 저장
+  const enrollRegularsIntoEvents = async (users: any[], latestEvents: ChurchEvent[]) => {
     const now = new Date();
     const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
     const futureEvents = latestEvents.filter(e => e.date >= todayStr);
+    const regulars = users.filter(u => u.id && (u.regFri || u.regSatPraise || u.regSunPraise || u.regSun));
+    if (futureEvents.length === 0 || regulars.length === 0) return { added: 0, failed: 0 };
 
-    for (const ev of futureEvents) {
-      let shouldApply = false;
-      if ((ev.title.includes('금요') || ev.title.includes('Friday')) && data.regFri) shouldApply = true;
-      if ((ev.title.includes('토요') || ev.title.includes('Saturday')) && data.regSatPraise) shouldApply = true;
-      if ((ev.title.includes('12 PM') || ev.title.includes('Early')) && data.regSunPraise) shouldApply = true;
-      if ((ev.title.includes('주일예배') || ev.title.includes('Sunday Worship')) && data.regSun) shouldApply = true;
+    // 해당 일정들의 기존 신청 목록을 한 번에 가져옴 (Firestore 'in' 조건은 30개씩)
+    const existingIds = new Set<string>();
+    const eventIds = futureEvents.map(e => e.id);
+    for (let i = 0; i < eventIds.length; i += 30) {
+      const snap = await getDocs(query(collection(db, 'applications'), where('eventId', 'in', eventIds.slice(i, i + 30))));
+      snap.forEach(d => existingIds.add(d.id));
+    }
 
-      if (shouldApply) {
-        const appRef = doc(db, 'applications', `${ev.id}_${uid}`);
-        const appSnap = await getDoc(appRef);
-        if (!appSnap.exists()) {
-          await setDoc(appRef, {
-            eventId: ev.id, userId: uid, name: data.name, phone: data.phone, address: data.address, zone: data.zone || 'zone6',
-            rideType: data.rideType, capacity: data.capacity, role: data.rideType.includes('Drive') ? 'driver' : 'rider',
-            carIdTo: null, carIdFrom: null, statusTo: '', statusFrom: '', isVan: data.isVan || false, appliedAt: serverTimestamp()
-          });
-        }
+    const toCreate: { id: string; data: any }[] = [];
+    for (const u of regulars) {
+      const rideType = u.rideType || 'Need a Ride';
+      for (const ev of futureEvents) {
+        const appId = `${ev.id}_${u.id}`;
+        if (existingIds.has(appId) || !isRegularFor(ev, u)) continue;
+        toCreate.push({
+          id: appId,
+          data: {
+            eventId: ev.id, userId: u.id, name: u.name || '', phone: u.phone || '', address: u.address || '', zone: u.zone || 'zone6',
+            rideType, capacity: u.capacity || '4', role: rideType.includes('Drive') ? 'driver' : 'rider',
+            carIdTo: null, carIdFrom: null, statusTo: '', statusFrom: '', isVan: u.isVan || false, appliedAt: serverTimestamp()
+          }
+        });
       }
     }
+
+    let added = 0, failed = 0;
+    for (let i = 0; i < toCreate.length; i += 400) {
+      const chunk = toCreate.slice(i, i + 400);
+      const batch = writeBatch(db);
+      chunk.forEach(c => batch.set(doc(db, 'applications', c.id), c.data));
+      try { await batch.commit(); added += chunk.length; }
+      catch (error) { console.error(error); failed += chunk.length; }
+    }
+    return { added, failed };
+  };
+
+  // 한 사람(프로필 저장 / 교인 추가 시)용
+  const autoEnrollFutureEvents = async (uid: string, data: any, latestEvents: ChurchEvent[]) => {
+    return enrollRegularsIntoEvents([{ ...data, id: uid }], latestEvents);
+  };
+
+  // 관리자: 전체 교인 중 정기 참석자를 주어진 일정에 자동 신청
+  const enrollAllRegulars = async (latestEvents: ChurchEvent[]) => {
+    const uSnap = await getDocs(query(collection(db, 'users')));
+    const allUs = uSnap.docs.map(d => ({ ...d.data(), id: d.id }));
+    return enrollRegularsIntoEvents(allUs, latestEvents);
   };
 
   useEffect(() => {
@@ -494,7 +537,9 @@ export default function Home() {
   const handleCreateEvent = async (e: React.FormEvent) => {
     e.preventDefault(); setCreatingEvent(true);
     try {
-      await addDoc(collection(db, 'events'), newEvent);
+      const newRef = await addDoc(collection(db, 'events'), newEvent);
+      // 정기 일정(금요예배/찬양팀/주일예배)을 하나씩 만들 때도 정기 참석자 자동 신청
+      try { await enrollAllRegulars([{ ...newEvent, id: newRef.id } as ChurchEvent]); } catch (error) { console.error(error); }
       setNewEvent({ title: '', date: '', destination: '', type: 'regular' });
       await fetchEvents();
       setCurrentTab('calendar');
@@ -548,21 +593,18 @@ export default function Home() {
       const evQ = query(collection(db, 'events'));
       const evSnap = await getDocs(evQ);
       const allEvs = evSnap.docs.map(d => ({id: d.id, ...d.data()})) as ChurchEvent[];
-      
-      const uQ = query(collection(db, 'users'));
-      const uSnap = await getDocs(uQ);
-      const allUs = uSnap.docs.map(d => ({id: d.id, ...d.data()})) as (UserProfile & {id: string})[];
 
-      for (const u of allUs) {
-        if (u.regFri || u.regSatPraise || u.regSunPraise || u.regSun) {
-          await autoEnrollFutureEvents(u.id, u, allEvs);
-        }
-      }
+      // 정기 참석자 자동 신청 (이미 만들어진 앞으로의 일정 중 빠진 사람도 함께 채움)
+      const { added, failed } = await enrollAllRegulars(allEvs);
 
       await fetchEvents();
-      alert(t.autoGenDone);
+      alert(`${t.autoGenDone}\n${lang === 'ko' ? `정기 참석 자동 신청: ${added}건` : `Auto-applied regulars: ${added}`}` +
+        (failed > 0 ? `\n${lang === 'ko' ? `⚠️ 실패 ${failed}건 - 버튼을 한 번 더 눌러주세요` : `⚠️ ${failed} failed - please press the button again`}` : ''));
       setCurrentTab('calendar');
-    } catch (error) { console.error(error); } finally { setCreatingEvent(false); }
+    } catch (error) {
+      console.error(error);
+      alert(lang === 'ko' ? '일정 생성 중 오류가 발생했습니다. 다시 시도해 주세요.' : 'An error occurred. Please try again.');
+    } finally { setCreatingEvent(false); }
   };
 
   const handleDeleteEvent = async (eventId: string) => {
